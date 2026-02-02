@@ -1,0 +1,54 @@
+aws:
+  access_key_id: "YOUR_AWS_ACCESS_KEY_ID" # Remplacer par votre clé d'accès AWS
+  secret_access_key: "YOUR_AWS_SECRET_ACCESS_KEY" # Remplacer par votre clé secrète AWS
+  region: "eu-central-1"
+  domain_name: "suricata-prod"
+  opensearch_endpoint: "" # Sera rempli après le provisioning du domaine
+
+sensor:
+  home_net: "192.168.178.0/24"
+  pi_ip: "192.168.178.66"
+  eth_interface: "eth0"
+  ramdisk_path: "/mnt/ram_logs/eve.json"
+  cpu_limit_percent: 70
+  ram_limit_percent: 70
+  swap_size_gb: 2
+
+vector:
+  index_pattern: "suricata-%Y.%m.%d"
+  config_path: "vector/vector.toml"
+  log_read_path: "/mnt/ram_logs/eve.json"
+
+redis:
+  host: "redis" # Nom du service Docker Compose
+  port: 6379
+  db: 0
+
+prometheus:
+  port: 9100 # Port pour l'exporteur de métriques de l'agent
+  docker_port: 9090 # Port pour le serveur Prometheus dans Docker
+
+grafana:
+  docker_port: 3000 # Port pour le serveur Grafana dans Docker
+
+docker:
+  redis: true
+  prometheus: true
+  grafana: true
+  vector_cpu: 1.0
+  vector_ram_mb: 1024
+  redis_cpu: 0.5
+  redis_ram_mb: 512
+  prometheus_cpu: 0.5
+  prometheus_ram_mb: 512
+  grafana_cpu: 0.5
+  grafana_ram_mb: 512
+  cadvisor_cpu: 0.2 # Nouvelle entrée pour cAdvisor
+  cadvisor_ram_mb: 128 # Nouvelle entrée pour cAdvisor
+  node_exporter_cpu: 0.1 # Nouvelle entrée pour Node Exporter
+  node_exporter_ram_mb: 64 # Nouvelle entrée pour Node Exporter
+
+git:
+  branch: "dev"
+
+connectivity_check_interval: 5 # Intervalle en secondes pour les vérifications de connectivité

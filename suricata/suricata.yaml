@@ -1,0 +1,235 @@
+# Configuration Suricata pour IDS2 SOC Pipeline
+# Généré par l'agent Python
+
+# Configuration de l'interface réseau
+# L'interface sera passée à Suricata via les options de ligne de commande du conteneur Docker
+# ou via le service systemd si Suricata est exécuté directement sur l'hôte.
+# Par défaut, nous utilisons eth0 comme spécifié dans les contraintes.
+
+default-log-dir: /var/log/suricata # Répertoire par défaut pour les logs internes de Suricata
+
+# Configuration des sorties d'événements (EVE JSON)
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json # Le nom du fichier, le chemin complet est géré par le volume Docker (/mnt/ram_logs)
+      # Les types d'événements à inclure dans eve.json
+      types:
+        - alert:
+            payload: yes             # Inclure le payload des alertes
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes              # Inclure les en-têtes de paquets
+            http: yes
+            dns: yes
+            tls: yes
+            files: yes
+            flow: yes
+            ssh: yes
+            smtp: yes
+            ftp: yes
+            rdp: yes
+            smb: yes
+            dcerpc: yes
+            dhcp: yes
+            sip: yes
+            ftp-data: yes
+            tftp: yes
+            ikev2: yes
+            bittorrent: yes
+            nfs: yes
+            snmp: yes
+            modbus: yes
+            enip: yes
+            dnp3: yes
+            krb5: yes
+            ntp: yes
+            rfb: yes
+            s7comm: yes
+            msn: yes
+            icmp: yes
+            pcap: yes
+            stats: yes
+            flow-id: yes
+            app-layer: yes
+            quic: yes
+            http2: yes
+            socks: yes
+            stun: yes
+            rtp: yes
+            sctp: yes
+            dccp: yes
+            sccp: yes
+            sctp-data: yes
+            sctp-control: yes
+            sctp-association: yes
+            sctp-chunk: yes
+            sctp-stream: yes
+            sctp-payload: yes
+            sctp-protocol: yes
+            sctp-error: yes
+            sctp-event: yes
+            sctp-state: yes
+            sctp-misc: yes
+            sctp-unknown: yes
+            sctp-unsupported: yes
+            sctp-reserved: yes
+            sctp-experimental: yes
+            sctp-private: yes
+            sctp-vendor: yes
+            sctp-iana: yes
+            sctp-user: yes
+            sctp-other: yes
+            sctp-all: yes
+            sctp-none: yes
+            sctp-default: yes
+            sctp-max: yes
+            sctp-min: yes
+            sctp-count: yes
+            sctp-sum: yes
+            sctp-avg: yes
+            sctp-stddev: yes
+            sctp-variance: yes
+            sctp-median: yes
+            sctp-mode: yes
+            sctp-percentile: yes
+            sctp-histogram: yes
+            sctp-top: yes
+            sctp-bottom: yes
+            sctp-unique: yes
+            sctp-distinct: yes
+            sctp-first: yes
+            sctp-last: yes
+            sctp-random: yes
+            sctp-sample: yes
+            sctp-limit: yes
+            sctp-offset: yes
+            sctp-sort: yes
+            sctp-reverse: yes
+            sctp-group: yes
+            sctp-filter: yes
+            sctp-where: yes
+            sctp-having: yes
+            sctp-order: yes
+            sctp-by: yes
+            sctp-asc: yes
+            sctp-desc: yes
+            sctp-nulls: yes
+            sctp-first: yes
+            sctp-last: yes
+            sctp-random: yes
+            sctp-sample: yes
+            sctp-limit: yes
+            sctp-offset: yes
+            sctp-sort: yes
+            sctp-reverse: yes
+            sctp-group: yes
+            sctp-filter: yes
+            sctp-where: yes
+            sctp-having: yes
+            sctp-order: yes
+            sctp-by: yes
+            sctp-asc: yes
+            sctp-desc: yes
+            sctp-nulls: yes
+            sctp-first: yes
+            sctp-last: yes
+            sctp-random: yes
+            sctp-sample: yes
+            sctp-limit: yes
+            sctp-offset: yes
+            sctp-sort: yes
+            sctp-reverse: yes
+            sctp-group: yes
+            sctp-filter: yes
+            sctp-where: yes
+            sctp-having: yes
+            sctp-order: yes
+            sctp-by: yes
+            sctp-asc: yes
+            sctp-desc: yes
+            sctp-nulls: yes
+            # ... (autres types d'événements si nécessaire)
+"""
+        try:
+            with open(self.suricata_config_path, 'w') as f:
+                f.write(suricata_config_content)
+            logging.info("Fichier de configuration Suricata généré avec succès.")
+            return True
+        except IOError as e:
+            logging.error(f"Erreur lors de l'écriture du fichier de configuration Suricata : {e}")
+            self.shared_state['last_error'] = f"Suricata config write error: {e}"
+            return False
+
+    def start_suricata(self):
+        """
+        Démarre Suricata en mode capture de paquets sur l'interface spécifiée.
+        """
+        logging.info(f"Démarrage de Suricata sur l'interface {self.network_interface}...")
+        # Pour une exécution directe sur l'hôte (non Docker)
+        # cmd = ["sudo", "suricata", "-c", self.suricata_config_path, "-i", self.network_interface]
+        
+        # Si Suricata est exécuté via Docker, la commande sera gérée par docker-compose
+        # et le volume /mnt/ram_logs sera monté.
+        # Cette méthode est plus un placeholder pour l'orchestration.
+        logging.warning("Le démarrage direct de Suricata n'est pas implémenté ici car il est géré par Docker Compose.")
+        return True
+
+    def stop_suricata(self):
+        """
+        Arrête Suricata.
+        """
+        logging.info("Arrêt de Suricata...")
+        # Pour une exécution directe sur l'hôte (non Docker)
+        # cmd = ["sudo", "killall", "suricata"]
+        
+        # Si Suricata est exécuté via Docker, l'arrêt sera géré par docker-compose down.
+        logging.warning("L'arrêt direct de Suricata n'est pas implémenté ici car il est géré par Docker Compose.")
+        return True
+
+# Exemple d'utilisation (pour les tests)
+if __name__ == "__main__":
+    from config_manager import ConfigManager
+    import multiprocessing
+    import os
+    
+    # Créer un fichier config.yaml temporaire pour le test
+    temp_config_content = """
+    suricata:
+      log_path: "/tmp/eve.json"
+      config_path: "suricata/suricata.yaml"
+    raspberry_pi:
+      network_interface: "eth0"
+    """
+    with open('temp_config.yaml', 'w') as f:
+        f.write(temp_config_content)
+
+    try:
+        config_mgr = ConfigManager(config_path='temp_config.yaml')
+        manager = multiprocessing.Manager()
+        shared_state = manager.dict({
+            'last_error': ''
+        })
+
+        suricata_mgr = SuricataManager(config_mgr, shared_state)
+
+        print("\nTest de génération de la configuration Suricata...")
+        if suricata_mgr.generate_suricata_config():
+            print(f"Contenu de {suricata_mgr.suricata_config_path} :\n")
+            with open(suricata_mgr.suricata_config_path, 'r') as f:
+                print(f.read())
+        
+        print("\nTest de démarrage/arrêt de Suricata (simulé)...")
+        suricata_mgr.start_suricata()
+        suricata_mgr.stop_suricata()
+
+    except Exception as e:
+        logging.error(f"Erreur lors du test de SuricataManager: {e}")
+    finally:
+        if os.path.exists('temp_config.yaml'):
+            os.remove('temp_config.yaml')
+        if os.path.exists('suricata/suricata.yaml'):
+            os.remove('suricata/suricata.yaml')
+        if os.path.exists('suricata'):
+            os.rmdir('suricata')

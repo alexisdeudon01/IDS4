@@ -1,0 +1,17 @@
+[Unit]
+Description=IDS2 SOC Agent on Raspberry Pi
+After=network.target docker.service redis.service
+
+[Service]
+User=pi
+Group=pi
+WorkingDirectory=/home/tor/Downloads/oi/python_env
+ExecStart=/usr/bin/python3 /home/tor/Downloads/oi/python_env/main.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ids2-agent
+
+[Install]
+WantedBy=multi-user.target

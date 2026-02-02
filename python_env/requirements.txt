@@ -1,0 +1,11 @@
+uvloop
+asyncio
+redis
+boto3
+prometheus_client
+PyYAML
+docker
+psutil
+opensearch-py
+orjson w
+requests_aws4auth
