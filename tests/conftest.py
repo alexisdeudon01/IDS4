@@ -99,7 +99,7 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         # Marquer les tests async
         if asyncio.iscoroutinefunction(item.function):
-            item.add_marker(pytest.mark.async)
+            item.add_marker(pytest.mark.asyncio)
         
         # Marquer les tests lents
         if "sleep" in item.get_closest_marker("slow", default=""):
@@ -137,70 +137,3 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure_after_parseopts(config):
-    """Configure après parsing des options."""
-    if not config.getoption("--integration"):
-        config.addinivalue_line(
-            "markers",
-            "integration: tests d'intégration (désactivés par défaut)"
-        )
-
-
-# ============================================================================
-# Helpers de Test
-# ============================================================================
-
-@pytest.fixture
-def assert_async():
-    """Helper pour les assertions async."""
-    async def helper(coro, expected):
-        result = await coro
-        assert result == expected
-        return result
-    
-    return helper
-
-
-@pytest.fixture
-def mock_time(monkeypatch):
-    """Mock le temps pour les tests."""
-    class MockTime:
-        def __init__(self):
-            self.current_time = datetime.utcnow()
-        
-        def advance(self, seconds):
-            import datetime as dt
-            self.current_time += dt.timedelta(seconds=seconds)
-    
-    return MockTime()
-
-
-# ============================================================================
-# Re-exporter les fixtures spécialisées
-# ============================================================================
-
-__all__ = [
-    # Fixtures de base
-    "logger",
-    "test_data_dir",
-    "temp_dir",
-    "event_loop",
-    "reset_logging",
-    "cleanup_temp_files",
-    
-    # Fixtures de domain
-    "alerte_ids_simple",
-    "alerte_ids_critique",
-    "alerte_ids_batch",
-    
-    # Fixtures de config
-    "config_ids_test",
-    "config_manager_test",
-    
-    # Fixtures de conteneur DI
-    "container_di_test",
-    
-    # Helpers
-    "assert_async",
-    "mock_time",
-]

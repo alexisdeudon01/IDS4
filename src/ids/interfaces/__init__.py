@@ -7,7 +7,7 @@ Cela permet une dépendance vers les abstractions plutôt que les implémentatio
 
 from typing import Protocol, AsyncGenerator, Optional, Dict, Any
 from datetime import datetime
-from .domain import AlerteIDS, ConditionSante
+from ..domain import AlerteIDS, ConditionSante
 
 
 class AlerteSource(Protocol):

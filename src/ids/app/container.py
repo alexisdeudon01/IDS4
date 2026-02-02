@@ -17,13 +17,13 @@ except ImportError:
         "Installez-le avec: pip install punq"
     )
 
-from .domain import ConfigurationIDS
-from .interfaces import (
+from ..domain import ConfigurationIDS
+from ..interfaces import (
     AlerteSource,
     GestionnaireComposant,
     GestionnaireConfig,
 )
-from .config.loader import ConfigManager
+from ..config.loader import ConfigManager
 
 T = TypeVar("T")
 
