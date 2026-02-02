@@ -134,6 +134,7 @@ Trafic réseau (mirroring)
 * Capture passive uniquement
 * Fonctionne **hors Docker**
 * Écrit exclusivement en local
+* Géré comme un service `systemd`
 
 ### Vector
 
@@ -192,14 +193,23 @@ Chaque service est **isolé**, supervisé et redémarré automatiquement.
 
 * Suricata : ~3 cœurs
 * Vector : ~1 cœur
-* Autres services : fortement limités
+* Redis : ~0.5 cœur
+* Prometheus : ~0.2 cœur
+* Grafana : ~0.2 cœur
+* FastAPI : ~0.5 cœur
+* cAdvisor : ~0.1 cœur
+* Node Exporter : ~0.1 cœur
 
 ### Répartition RAM
 
 * Suricata : ~4 GB
 * Vector : ~1 GB
 * Redis : ~512 MB
-* Stack Docker : ~1 GB
+* Prometheus : ~256 MB
+* Grafana : ~256 MB
+* FastAPI : ~256 MB
+* cAdvisor : ~64 MB
+* Node Exporter : ~64 MB
 * Libre : >1 GB
 
 ### Mécanismes de contrôle
@@ -315,4 +325,3 @@ Aucun accès SSH requis pour l’exploitation courante.
 ✔ Pilotage Web local
 ✔ Adapté Raspberry Pi 5
 ✔ Prêt production 24/7
-

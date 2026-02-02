@@ -1,24 +1,5 @@
 version: '3.8'
 services:
-  suricata:
-    image: oisf/suricata:6.0.10 # Utiliser une image Suricata stable
-    command: ["-i", "eth0", "-c", "/etc/suricata/suricata.yaml", "--set", "outputs.0.eve-log.filename=/mnt/ram_logs/eve.json"]
-    network_mode: "host" # Pour capturer le trafic sur l'interface hôte
-    volumes:
-      - ./suricata.yaml:/etc/suricata/suricata.yaml:ro
-      - /mnt/ram_logs:/mnt/ram_logs # Volume pour les logs Suricata (RAM disk)
-      - ./rules:/etc/suricata/rules:ro # Volume pour les règles Suricata
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    privileged: true # Nécessaire pour la capture de paquets en mode host
-    deploy:
-      resources:
-        limits:
-          cpus: "${DOCKER_SURICATA_CPU:-3.0}" # 3 cœurs pour Suricata
-          memory: "${DOCKER_SURICATA_RAM_MB:-4096}M" # ~4 GB RAM pour Suricata
-    restart: unless-stopped
-
   vector:
     image: timberio/vector:0.34.0-alpine
     command: ["vector", "--config", "/etc/vector/vector.toml"]

@@ -5,4 +5,11 @@
 echo "Arrêt du service ids2-agent..."
 sudo systemctl stop ids2-agent.service
 
-echo "Service ids2-agent arrêté."
+echo "Arrêt du service Suricata..."
+sudo systemctl stop suricata.service
+
+echo "Arrêt de la pile Docker Compose..."
+# Naviguer vers le répertoire docker et arrêter la pile
+(cd docker && sudo docker compose down)
+
+echo "Services arrêtés."

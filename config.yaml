@@ -55,27 +55,31 @@ grafana:
   docker_port: 3000 # Port pour le serveur Grafana dans Docker
 
 docker:
-  compose_file: "docker/docker-compose.yml" # Chemin du fichier docker-compose
-  required_services: ["suricata", "vector", "redis", "prometheus", "grafana", "cadvisor", "node_exporter"] # Tous les services
-  suricata_cpu: 3.0 # Limites CPU pour Suricata
-  suricata_ram_mb: 4096 # Limites RAM pour Suricata
+  compose_file: "docker/docker-compose.yml"
+  required_services: ["vector", "redis", "prometheus", "grafana", "cadvisor", "node_exporter", "fastapi"] # Suricata retiré, FastAPI ajouté
   vector_cpu: 1.0
   vector_ram_mb: 1024
   redis_cpu: 0.5
   redis_ram_mb: 512
-  prometheus_cpu: 0.2 # Ajusté
-  prometheus_ram_mb: 256 # Ajusté
-  grafana_cpu: 0.2 # Ajusté
-  grafana_ram_mb: 256 # Ajusté
-  cadvisor_cpu: 0.1 # Ajusté
-  cadvisor_ram_mb: 64 # Ajusté
+  prometheus_cpu: 0.2
+  prometheus_ram_mb: 256
+  grafana_cpu: 0.2
+  grafana_ram_mb: 256
+  cadvisor_cpu: 0.1
+  cadvisor_ram_mb: 64
   node_exporter_cpu: 0.1
   node_exporter_ram_mb: 64
+  fastapi_cpu: 0.5 # Limites CPU pour FastAPI
+  fastapi_ram_mb: 256 # Limites RAM pour FastAPI
 
 git:
   branch: "dev"
 
-connectivity: # Nouvelle section pour les paramètres de connectivité
-  check_interval: 10 # Intervalle en secondes pour les vérifications de connectivité
+connectivity:
+  check_interval: 10
   max_retries: 5
   initial_backoff: 1
+
+fastapi: # Nouvelle section pour la configuration FastAPI
+  port: 8000
+  host: "0.0.0.0"

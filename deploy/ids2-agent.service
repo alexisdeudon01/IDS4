@@ -1,6 +1,7 @@
 [Unit]
 Description=IDS2 SOC Agent on Raspberry Pi
-After=network.target docker.service redis.service
+After=network.target docker.service redis.service suricata.service
+Requires=suricata.service # L'agent dépend de Suricata
 
 [Service]
 User=pi

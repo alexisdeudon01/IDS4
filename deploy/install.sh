@@ -13,7 +13,7 @@ echo "Mise à jour du système..."
 apt update && apt upgrade -y
 
 echo "Installation des dépendances système..."
-apt install -y python3-pip python3-venv git curl gnupg2 apt-transport-https ca-certificates software-properties-common
+apt install -y python3-pip python3-venv git curl gnupg2 apt-transport-https ca-certificates software-properties-common suricata # Ajout de suricata
 
 echo "Installation de Docker..."
 # Ajouter la clé GPG officielle de Docker
@@ -39,6 +39,16 @@ echo "Installation des dépendances Python..."
 
 echo "Rendre les scripts de déploiement exécutables..."
 chmod +x deploy/*.sh
+
+echo "Configuration de Suricata..."
+# Créer le répertoire des règles Suricata si non existant
+mkdir -p /etc/suricata/rules
+# Copier les règles par défaut ou un placeholder
+# Pour une vraie installation, il faudrait télécharger les règles ici
+touch /etc/suricata/rules/local.rules # Créer un fichier de règles vide pour éviter les erreurs
+# Désactiver le service Suricata par défaut s'il est activé par l'installation
+systemctl disable suricata || true
+systemctl stop suricata || true
 
 echo "Configuration de l'interface réseau (eth0 uniquement)..."
 # Copier le script network_eth0_only.sh et le rendre exécutable

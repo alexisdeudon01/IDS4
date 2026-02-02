@@ -1,0 +1,15 @@
+[Unit]
+Description=Suricata IDS
+After=network.target network-eth0-only.service
+Requires=network-eth0-only.service
+
+[Service]
+ExecStart=/usr/bin/suricata -i eth0 -c /home/tor/Downloads/oi/suricata/suricata.yaml --set outputs.0.eve-log.filename=/mnt/ram_logs/eve.json
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=suricata
+
+[Install]
+WantedBy=multi-user.target
