@@ -15,3 +15,5 @@ fastapi
 uvicorn[standard]
 python-multipart
 jinja2
+pytest
+pytest-asyncio

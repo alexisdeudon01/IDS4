@@ -1,0 +1,26 @@
+stateDiagram-v2
+    [*] --> Initializing
+    
+    Initializing: Checking config & dependencies
+    Initializing --> DockerStarting: config_ready
+    Initializing --> Error: config_invalid
+    
+    DockerStarting: Spinning up containers
+    DockerStarting --> Running: docker_healthy
+    DockerStarting --> Error: docker_failed
+    
+    Running: Monitoring processes
+    Running --> Throttling: high_cpu | high_mem
+    Running --> ShuttingDown: interrupt | error
+    
+    Throttling: Resource limit exceeded
+    Throttling --> Running: normal_resources
+    Throttling --> ShuttingDown: interrupt | error
+    
+    ShuttingDown: Graceful shutdown
+    ShuttingDown --> Stopped: shutdown_complete
+    
+    Error: Error occurred
+    Error --> Stopped
+    
+    Stopped --> [*]

@@ -1,0 +1,16 @@
+graph LR
+    Suricata["Suricata IDS"] -->|eve.json| RAM["/mnt/ram_logs"]
+    RAM -->|tail| Vector["Vector Agent"]
+    Vector -->|ECS Transform| Redis["Redis Queue"]
+    Vector -->|Also sends to| AWS["AWS OpenSearch"]
+    Redis -->|consume| Dashboard["Grafana Dashboard"]
+    AWS -->|query| Dashboard
+    
+    Prom["Prometheus"] -->|metrics| Dashboard
+    Docker["Docker Containers"] -->|metrics| Prom
+    Host["Host System"] -->|metrics| Prom
+    
+    style Suricata fill:#ff9999
+    style Vector fill:#99ccff
+    style Dashboard fill:#99ff99
+    style AWS fill:#ffcc99

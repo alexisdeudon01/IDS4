@@ -1,0 +1,17 @@
+flowchart TD
+    A["🚀 Start Agent"] --> B{"Check Git<br/>Branch"}
+    B -->|dev branch| C["⚙️  Initialize Config"]
+    B -->|wrong branch| G["❌ Error: Wrong Branch"]
+    
+    C --> D["🐳 Start Docker<br/>Containers"]
+    D -->|success| E["🔄 Spawn Manager<br/>Processes"]
+    D -->|failure| G
+    
+    E --> F["👁️  Monitor Processes<br/>& Resources"]
+    
+    F -->|running| F
+    F -->|interrupt| H["🛑 Graceful<br/>Shutdown"]
+    F -->|error| H
+    
+    H --> I["🏁 End"]
+    G --> I

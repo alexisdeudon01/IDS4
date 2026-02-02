@@ -1,0 +1,48 @@
+classDiagram
+    class BaseComponent {
+        #dict shared_state
+        #ConfigManager config
+        #Event shutdown_event
+        #Logger logger
+        +get_config(key, default) dict
+        +update_shared_state(key, value)* void
+        +is_shutdown_requested()* bool
+    }
+    
+    class ResourceController {
+        -int throttling_level
+        -dict thresholds
+        +run() void
+        +check_resources() void
+        +apply_throttling() void
+    }
+    
+    class DockerManager {
+        -list container_names
+        -dict containers
+        +start_services() bool
+        +stop_services() bool
+        +health_check() bool
+    }
+    
+    class MetricsServer {
+        -int port
+        -dict metrics
+        +start() void
+        +collect_metrics() dict
+        +get_metrics() dict
+    }
+    
+    class ConnectivityAsync {
+        -dict status
+        +check_aws() bool
+        +check_redis() bool
+        +check_pipeline() bool
+    }
+    
+    ResourceController --|> BaseComponent: inherits
+    DockerManager --|> BaseComponent: inherits
+    MetricsServer --|> BaseComponent: inherits
+    ConnectivityAsync --|> BaseComponent: inherits
+    ResourceController --> DockerManager: manages
+    MetricsServer --> ConnectivityAsync: uses

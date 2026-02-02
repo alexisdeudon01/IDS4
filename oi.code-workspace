@@ -4,5 +4,8 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"github.copilot.nextEditSuggestions.allowWhitespaceOnlyChanges": false,
+		"markdown.validate.enabled": true
+	}
 }

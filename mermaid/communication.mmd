@@ -1,0 +1,69 @@
+sequenceDiagram
+    participant AS as AgentSupervisor
+    participant CM as ConfigManager
+    participant RC as ResourceController
+    participant CA as ConnectivityAsync
+    participant AM as AWSManager
+    participant DM as DockerManager
+    participant VM as VectorManager
+    participant SM as SuricataManager
+    participant MS as MetricsServer
+    participant GW as GitWorkflow
+    participant SRM as SuricataRulesManager
+    participant WIM as WebInterfaceManager
+    database SS as "Shared State (multiprocessing.Manager.dict)"
+
+    AS->>CM: init_config
+    AS->>DM: init_docker
+    AS->>VM: init_vector
+    AS->>SM: init_suricata
+    AS->>GW: init_git
+
+    AS->>GW: check_branch
+    AS->>VM: generate_vector_config
+    AS->>SM: generate_suricata_config
+    AS->>SM: start_suricata
+
+    AS->>DM: prepare_docker_stack
+
+    AS->>RC: start_ResourceController
+    RC->>SS: update_cpu_usage
+    RC->>SS: update_ram_usage
+    RC->>SS: update_throttling_level
+
+    AS->>MS: start_MetricsServer
+    MS->>SS: get_cpu_usage
+    MS->>SS: get_ram_usage
+    MS->>SS: get_redis_queue_depth
+    MS->>SS: get_vector_healthy
+    MS->>SS: get_ingestion_rate_increment
+    MS->>SS: get_error_increment
+    MS->>SS: get_aws_ready
+    MS->>SS: get_redis_ready
+    MS->>SS: get_pipeline_ok
+    MS->>SS: get_throttling_level
+    MS->>SS: reset_ingestion_rate_increment
+    MS->>SS: reset_error_increment
+
+    AS->>SRM: start_SuricataRulesManager
+    SRM->>SS: log_error
+
+    AS->>WIM: start_WebInterfaceManager
+
+    AS->>DM: check_stack_health
+    DM->>SS: update_docker_healthy
+
+    AS->>CA: start_ConnectivityAsync
+    CA->>AM: init_aws_manager
+    CA->>AM: get_opensearch_client
+    CA->>SS: update_aws_ready
+    CA->>SS: update_redis_ready
+    CA->>SS: update_pipeline_ok
+    CA->>SS: log_error
+
+    AS->>SS: get_aws_ready
+    AS->>SS: update_pipeline_ok
+
+    AS->>AS: monitor_processes
+    AS->>AS: graceful_shutdown
+    AS->>DM: stop_docker_stack
