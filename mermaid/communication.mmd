@@ -11,59 +11,59 @@ sequenceDiagram
     participant GW as GitWorkflow
     participant SRM as SuricataRulesManager
     participant WIM as WebInterfaceManager
-    database SS as "Shared State (multiprocessing.Manager.dict)"
+    database SS as SharedState
 
-    AS->>CM: init_config
-    AS->>DM: init_docker
-    AS->>VM: init_vector
-    AS->>SM: init_suricata
-    AS->>GW: init_git
+    AS->>CM: Init
+    AS->>DM: Init
+    AS->>VM: Init
+    AS->>SM: Init
+    AS->>GW: Init
 
-    AS->>GW: check_branch
-    AS->>VM: generate_vector_config
-    AS->>SM: generate_suricata_config
-    AS->>SM: start_suricata
+    AS->>GW: CheckBranch
+    AS->>VM: GenerateVectorConfig
+    AS->>SM: GenerateSuricataConfig
+    AS->>SM: StartSuricata
 
-    AS->>DM: prepare_docker_stack
+    AS->>DM: PrepareDockerStack
 
-    AS->>RC: start_ResourceController
-    RC->>SS: update_cpu_usage
-    RC->>SS: update_ram_usage
-    RC->>SS: update_throttling_level
+    AS->>RC: StartResourceController
+    RC->>SS: UpdateCpuUsage
+    RC->>SS: UpdateRamUsage
+    RC->>SS: UpdateThrottlingLevel
 
-    AS->>MS: start_MetricsServer
-    MS->>SS: get_cpu_usage
-    MS->>SS: get_ram_usage
-    MS->>SS: get_redis_queue_depth
-    MS->>SS: get_vector_healthy
-    MS->>SS: get_ingestion_rate_increment
-    MS->>SS: get_error_increment
-    MS->>SS: get_aws_ready
-    MS->>SS: get_redis_ready
-    MS->>SS: get_pipeline_ok
-    MS->>SS: get_throttling_level
-    MS->>SS: reset_ingestion_rate_increment
-    MS->>SS: reset_error_increment
+    AS->>MS: StartMetricsServer
+    MS->>SS: GetCpuUsage
+    MS->>SS: GetRamUsage
+    MS->>SS: GetRedisQueueDepth
+    MS->>SS: GetVectorHealthy
+    MS->>SS: GetIngestionRateIncrement
+    MS->>SS: GetErrorIncrement
+    MS->>SS: GetAwsReady
+    MS->>SS: GetRedisReady
+    MS->>SS: GetPipelineOk
+    MS->>SS: GetThrottlingLevel
+    MS->>SS: ResetIngestionRateIncrement
+    MS->>SS: ResetErrorIncrement
 
-    AS->>SRM: start_SuricataRulesManager
-    SRM->>SS: log_error
+    AS->>SRM: StartSuricataRulesManager
+    SRM->>SS: LogError
 
-    AS->>WIM: start_WebInterfaceManager
+    AS->>WIM: StartWebInterfaceManager
 
-    AS->>DM: check_stack_health
-    DM->>SS: update_docker_healthy
+    AS->>DM: CheckStackHealth
+    DM->>SS: UpdateDockerHealthy
 
-    AS->>CA: start_ConnectivityAsync
-    CA->>AM: init_aws_manager
-    CA->>AM: get_opensearch_client
-    CA->>SS: update_aws_ready
-    CA->>SS: update_redis_ready
-    CA->>SS: update_pipeline_ok
-    CA->>SS: log_error
+    AS->>CA: StartConnectivityAsync
+    CA->>AM: InitAwsManager
+    CA->>AM: GetOpenSearchClient
+    CA->>SS: UpdateAwsReady
+    CA->>SS: UpdateRedisReady
+    CA->>SS: UpdatePipelineOk
+    CA->>SS: LogError
 
-    AS->>SS: get_aws_ready
-    AS->>SS: update_pipeline_ok
+    AS->>SS: GetAwsReady
+    AS->>SS: UpdatePipelineOk
 
-    AS->>AS: monitor_processes
-    AS->>AS: graceful_shutdown
-    AS->>DM: stop_docker_stack
+    AS->>AS: MonitorProcesses
+    AS->>AS: GracefulShutdown
+    AS->>DM: StopDockerStack

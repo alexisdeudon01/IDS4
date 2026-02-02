@@ -1,25 +1,9 @@
 sequenceDiagram
-    participant Agent as AgentSupervisor
-    participant Config as ConfigManager
-    participant Docker as DockerManager
-    participant State as Shared State
-    participant Resource as ResourceController
-
-    Agent->>Config: init_config()
-    activate Config
-    Config-->>Agent: config loaded
-    deactivate Config
-    
-    Agent->>Docker: start containers
-    activate Docker
-    Docker->>State: update status
-    activate State
-    State-->>Docker: ack
-    deactivate State
-    Docker-->>Agent: ready
-    deactivate Docker
-    
-    Agent->>Resource: start monitoring
-    activate Resource
-    Resource->>State: register listener
-    Resource-->>Agent: monitoring started
+    title Diagramme de Séquence
+	participant Utilisateur
+	participant Système as S
+	participant BaseDeDonnées as DB
+	Utilisateur->>Système: Requête de données
+	Système->>BaseDeDonnées: Interroger la DB
+	BaseDeDonnées-->>Système: Données renvoyées
+	Système-->>Utilisateur: Afficher les résultats

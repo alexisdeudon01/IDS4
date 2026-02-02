@@ -37,11 +37,17 @@ code_string = str(mmd)
 ```python
 diagram_code = """sequenceDiagram
     participant Alice as Alice
+    actor User as User
     participant Bob as Bob
+    database DB as "Database"
     participant Charlie as Charlie
     
+    User->>Alice: Request
     Alice->>Bob: Synchronous call
     Bob-->>Alice: Synchronous response
+    
+    Bob->>DB: Store data
+    DB-->>Bob: Confirmation
     
     Bob->>Charlie: Asynchronous (fire & forget)
     activate Charlie
@@ -54,11 +60,18 @@ diagram_code = """sequenceDiagram
     
     alt Success case
         Bob-->>Alice: Status OK
+        Alice-->>User: Success
     else Failure case
         Bob-->>Alice: Status FAILED
+        Alice-->>User: Error
     end
 """
 ```
+
+**Participant Types:**
+- `participant` - Standard box (services, components)
+- `actor` - Stick figure (users, external actors)
+- `database` - Cylinder shape (databases, storage)
 
 **Use for:** Component interactions, API calls, message flows
 

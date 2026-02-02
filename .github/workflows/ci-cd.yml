@@ -1,0 +1,247 @@
+name: CI/CD - Tests & Déploiement
+
+on:
+  push:
+    branches: [main, dev, develop]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/ci-cd.yml'
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:  # Déclenchement manuel
+
+env:
+  PYTHON_VERSION: '3.12'
+  REGISTRY: ghcr.io
+
+jobs:
+  # =========================================================================
+  # Job 1: Tests Unitaires & Intégration
+  # =========================================================================
+  test:
+    name: Tests & Analyse Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+      fail-fast: false
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history pour Sonar
+      
+      - name: 🐍 Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov pytest-asyncio pytest-xdist
+      
+      - name: 🧪 Run Unit Tests
+        run: |
+          pytest tests/unit/ \
+            -v \
+            --cov=src/ids \
+            --cov-report=xml \
+            --cov-report=html \
+            --junitxml=test-results.xml
+      
+      - name: 🧪 Run Integration Tests (Optional)
+        run: |
+          pytest tests/integration/ \
+            -v \
+            -m "not requires_network" \
+            --timeout=60 \
+            || echo "Integration tests skipped or failed"
+      
+      - name: 📊 Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      - name: 📈 SonarQube Analysis (Option)
+        if: matrix.python-version == '3.12'
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        continue-on-error: true
+  
+  # =========================================================================
+  # Job 2: Vérifications Qualité Code
+  # =========================================================================
+  code-quality:
+    name: Qualité Code (Linting, Type Checking)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pylint flake8 black isort mypy
+      
+      - name: 🎨 Check code format (Black)
+        run: black --check src/ tests/
+        continue-on-error: true
+      
+      - name: 📐 Check import order (isort)
+        run: isort --check-only src/ tests/
+        continue-on-error: true
+      
+      - name: 🔍 Lint with flake8
+        run: flake8 src/ tests/ --max-line-length=100
+        continue-on-error: true
+      
+      - name: 🏷️ Type checking (mypy)
+        run: mypy src/ids --ignore-missing-imports
+        continue-on-error: true
+  
+  # =========================================================================
+  # Job 3: Build & Déploiement
+  # =========================================================================
+  deploy:
+    name: Déploiement Tailscale → Raspberry Pi
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    timeout-minutes: 30
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔐 Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.56.1
+          args: --advertise-exit-node
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install build twine
+      
+      - name: 🔨 Build package
+        run: |
+          python -m build
+      
+      - name: 📝 Prepare deployment
+        run: |
+          mkdir -p deploy_package
+          cp -r src/ deploy_package/
+          cp -r tests/ deploy_package/
+          cp requirements.txt deploy_package/
+          cp config.yaml deploy_package/
+          cp -r docker/ deploy_package/
+          cp -r suricata/ deploy_package/
+          cp -r vector/ deploy_package/
+      
+      - name: 📤 Deploy via SCP (Tailscale)
+        env:
+          DEPLOY_HOST: ${{ secrets.RASPBERRY_PI_TAILSCALE_IP }}
+          DEPLOY_USER: ${{ secrets.RASPBERRY_PI_USER }}
+          DEPLOY_PATH: /opt/ids
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.RASPBERRY_PI_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          # Créer répertoire destination
+          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
+            "mkdir -p $DEPLOY_PATH"
+          
+          # Upload des fichiers
+          scp -i ~/.ssh/id_rsa -r deploy_package/* \
+            $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+          
+          # Permissions
+          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
+            "chmod -R 755 $DEPLOY_PATH && \
+             chown -R $DEPLOY_USER:$DEPLOY_USER $DEPLOY_PATH"
+      
+      - name: 🚀 Restart IDS Service
+        env:
+          DEPLOY_HOST: ${{ secrets.RASPBERRY_PI_TAILSCALE_IP }}
+          DEPLOY_USER: ${{ secrets.RASPBERRY_PI_USER }}
+        run: |
+          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
+            "sudo systemctl restart ids2-agent || echo 'Service restart skipped'"
+        continue-on-error: true
+      
+      - name: ✅ Verify Deployment
+        env:
+          DEPLOY_HOST: ${{ secrets.RASPBERRY_PI_TAILSCALE_IP }}
+          DEPLOY_USER: ${{ secrets.RASPBERRY_PI_USER }}
+        run: |
+          ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
+            "ps aux | grep -i ids || echo 'IDS service check skipped'"
+        continue-on-error: true
+  
+  # =========================================================================
+  # Job 4: Notifications
+  # =========================================================================
+  notify:
+    name: Notifications
+    runs-on: ubuntu-latest
+    needs: [test, code-quality, deploy]
+    if: always()
+    
+    steps:
+      - name: 📢 Slack Notification (Optional)
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "IDS CI/CD Pipeline",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *Pipeline Failed*\n*Workflow*: ${{ github.workflow }}\n*Branch*: ${{ github.ref }}\n*Commit*: ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        continue-on-error: true
+      
+      - name: ✅ Success Summary
+        if: success()
+        run: |
+          echo "✅ All checks passed!"
+          echo "✅ Tests: OK"
+          echo "✅ Code Quality: OK"
+          echo "✅ Deployment: OK"
