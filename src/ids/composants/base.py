@@ -21,7 +21,7 @@ class BaseComponent(PipelineStatusProvider):
             config = arg1
             nom_composant = arg2 or self.__class__.__name__.lower()
 
-        self._config = config
+        self._config: Optional[GestionnaireConfig] = config
         self.nom_composant = nom_composant
         self.nom = nom_composant
         self._shutdown_event = asyncio.Event()
@@ -57,9 +57,10 @@ class BaseComponent(PipelineStatusProvider):
 
     @log_appel()
     async def recharger_config(self) -> None:
-        if self._config:
-            self._config.recharger()
-            self._logger.info("Configuration rechargee: %s", self.nom_composant)
+        if self._config is None:
+            return
+        self._config.recharger()
+        self._logger.info("Configuration rechargee: %s", self.nom_composant)
 
     def shutdown_requested(self) -> bool:
         return self._shutdown_event.is_set()
