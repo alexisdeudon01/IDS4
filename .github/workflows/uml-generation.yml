@@ -59,6 +59,17 @@ jobs:
         run: |
           python scripts/generate_uml.py --output-dir ${{ env.UML_OUTPUT_DIR }}
       
+      - name: 🔍 Run architecture analysis
+        id: analysis
+        run: |
+          python scripts/analyze_architecture.py > architecture-report.txt 2>&1 || true
+          cat architecture-report.txt
+          
+          # Extract health score for summary
+          HEALTH_SCORE=$(grep "Health score:" architecture-report.txt | sed 's/.*Health score: \([0-9.]*\).*/\1/' || echo "0")
+          echo "health_score=$HEALTH_SCORE" >> $GITHUB_OUTPUT
+        continue-on-error: true
+      
       - name: 📊 Verify generated diagrams
         run: |
           echo "Generated UML diagrams:"
@@ -97,6 +108,21 @@ jobs:
           path: ${{ env.UML_OUTPUT_DIR }}/INDEX.md
           retention-days: 90
       
+      - name: 📤 Upload architecture report
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: architecture-report.txt
+          retention-days: 90
+      
+      - name: 📤 Upload metrics history
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-history
+          path: ${{ env.UML_OUTPUT_DIR }}/metrics_history.json
+          retention-days: 90
+        continue-on-error: true
+      
       - name: 💾 Commit and push UML diagrams
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -119,6 +145,8 @@ jobs:
           echo "✅ Successfully generated **${{ steps.metrics.outputs.diagram_count }}** UML diagrams" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📁 Total size: **${{ steps.metrics.outputs.total_size }}**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🏗️ Architecture Health Score: **${{ steps.analysis.outputs.health_score }}/100**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Generated Diagrams" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
