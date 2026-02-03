@@ -20,3 +20,7 @@ build/
 
 # IDE
 .idea/
+
+# Generated architecture documentation
+architecture_docs/*.json
+architecture_docs/*.png
