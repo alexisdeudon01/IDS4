@@ -73,14 +73,6 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
       
-      - name: 📈 SonarQube Analysis (Option)
-        if: matrix.python-version == '3.12'
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        continue-on-error: true
-  
   # =========================================================================
   # Job 2: Vérifications Qualité Code
   # =========================================================================
@@ -137,9 +129,18 @@ jobs:
       - name: 🔐 Setup Tailscale
         uses: tailscale/github-action@v2
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          oauth-client-id: ${{ secrets.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
           version: 1.56.1
           args: --advertise-exit-node
+
+      - name: ✅ Verify Tailscale connection
+        env:
+          DEPLOY_HOST: ${{ secrets.RASPBERRY_PI_TAILSCALE_IP }}
+        run: |
+          tailscale status --json > /tmp/tailscale-status.json
+          tailscale ping -c 4 "$DEPLOY_HOST"
       
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
