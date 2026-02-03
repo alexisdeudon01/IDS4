@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import getpass
+import json
 import subprocess
 import re
 from dataclasses import dataclass, field
@@ -432,7 +433,7 @@ class TailnetMonitor:
         js_code = f"""
         <script>
         // Device console URL mapping
-        const deviceUrls = {repr(device_map)};
+        const deviceUrls = {json.dumps(device_map)};
         
         // Wait for network to be ready
         network.on("click", function(params) {{
