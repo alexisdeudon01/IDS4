@@ -23,7 +23,8 @@ redis>=4.5.0  # Redis client
 prometheus-client>=0.17.0  # Prometheus metrics
 python-json-logger>=2.0.4  # JSON logging
 pyvis>=0.3.2  # Network visualization
-networkx>=3.2.0  # Graph modeling
+networkx>=3.0  # Graph algorithms
+tailscale>=0.6.0  # Tailscale API client
 
 # Tailscale Network Monitoring & Visualization
 pyvis>=0.3.2  # Interactive network visualization
@@ -48,15 +49,3 @@ black>=23.0.0  # Formatting
 isort>=5.12.0  # Import sorting
 bandit>=1.7.0  # Security checks
 tqdm>=4.66.0  # Progress bar
-
-<<<<<<< Current (Your changes)
-# Network Monitoring & Visualization
-pyvis>=0.3.0  # Interactive network graphs
-networkx>=3.0  # Graph data structures
-tailscale>=0.6.0  # Tailscale API client
-=======
-# Tailscale Monitoring & Visualization
-tailscale>=0.6.0  # Tailscale API client (async)
-pyvis>=0.3.2  # Network visualization
-networkx>=3.0  # Graph library
->>>>>>> Incoming (Background Agent changes)

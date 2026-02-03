@@ -115,10 +115,46 @@ jobs:
           async def main() -> None:
               await check_tailscale()
               check_aws()
-              print("Connectivity checks passed.")
+              print("✅ Connectivity checks passed.")
 
           asyncio.run(main())
           PY
+      
+      - name: 📊 Generate Network Health Map
+        if: success()
+        env:
+          TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
+          TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
+        run: |
+          python - <<'PY'
+          import asyncio
+          import os
+          import sys
+          sys.path.insert(0, "src")
+          
+          from ids.monitoring.tailnet_monitor import TailnetMonitor
+          
+          tailnet = os.getenv("TAILSCALE_TAILNET")
+          api_key = os.getenv("TAILSCALE_API_KEY")
+          
+          monitor = TailnetMonitor(api_key, tailnet)
+          snapshot = monitor.get_current_state()
+          print(f"📡 Network: {snapshot.total_nodes} nodes ({snapshot.online_nodes} online)")
+          
+          snapshot = monitor.measure_mesh_latency(snapshot)
+          if snapshot.average_latency:
+              print(f"⚡ Average latency: {snapshot.average_latency:.2f}ms")
+          
+          monitor.generate_interactive_graph(snapshot, "network_health_map.html")
+          PY
+      
+      - name: 📤 Upload Network Health Map
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: network-health-map
+          path: network_health_map.html
+          retention-days: 7
 
   # =========================================================================
   # Job 2: Tests Unitaires & Intégration
