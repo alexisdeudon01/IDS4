@@ -30,7 +30,7 @@ def run_command(cmd: List[str], cwd: Optional[Path] = None) -> tuple[int, str, s
             check=False
         )
         return result.returncode, result.stdout, result.stderr
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError) as e:
         return 1, "", str(e)
 
 

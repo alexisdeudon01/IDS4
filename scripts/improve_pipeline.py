@@ -77,19 +77,19 @@ def analyze_architecture(project_root: Path) -> Dict:
             try:
                 score = float(line.split(':')[1].split('/')[0].strip())
                 metrics['health_score'] = score
-            except:
+            except (ValueError, IndexError):
                 pass
         elif 'Errors:' in line:
             try:
                 errors = int(line.split(':')[1].strip())
                 metrics['errors'] = errors
-            except:
+            except (ValueError, IndexError):
                 pass
         elif 'Warnings:' in line:
             try:
                 warnings = int(line.split(':')[1].strip())
                 metrics['warnings'] = warnings
-            except:
+            except (ValueError, IndexError):
                 pass
     
     print(f"✅ Analysis complete")
@@ -109,7 +109,7 @@ def save_metrics(metrics: Dict, project_root: Path):
         try:
             with open(metrics_file, 'r') as f:
                 history = json.load(f)
-        except:
+        except (json.JSONDecodeError, OSError):
             pass
     
     history.append(metrics)
@@ -162,7 +162,7 @@ def check_improvement(project_root: Path) -> bool:
         
         return improved
     
-    except Exception as e:
+    except (json.JSONDecodeError, OSError, KeyError) as e:
         print(f"⚠️  Could not compare metrics: {e}")
         return True
 

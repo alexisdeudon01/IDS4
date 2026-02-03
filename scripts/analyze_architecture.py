@@ -90,7 +90,7 @@ class ArchitectureAnalyzer:
                             if alias.name.startswith('ids.'):
                                 self.dependencies[module_name].add(alias.name)
             
-            except Exception as e:
+            except (SyntaxError, UnicodeDecodeError, OSError) as e:
                 print(f"  ⚠️  Failed to analyze {py_file}: {e}")
     
     def _analyze_dependencies(self):
