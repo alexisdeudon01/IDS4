@@ -332,3 +332,22 @@ Aucun accès SSH requis pour l'exploitation courante.
 ✔ Pilotage Web local
 ✔ Adapté Raspberry Pi 5
 ✔ Prêt production 24/7
+
+---
+
+## 16. GitHub Actions depuis Codespaces
+
+Les **Codespaces user secrets** ne sont pas disponibles automatiquement dans
+GitHub Actions. Pour lancer le workflow CI/CD depuis un Codespace :
+
+1. Copiez `scripts/actions_secrets.map.example` en `scripts/actions_secrets.map`
+   et ajustez les noms des variables source.
+2. Synchronisez vos secrets vers le dépôt :
+   `scripts/gh_actions_sync_secrets.sh --repo OWNER/REPO`
+   * Le script utilise `GITAPI` comme `GH_TOKEN` si présent.
+3. Déclenchez le workflow :
+   `scripts/gh_actions_run.sh --ref main`
+   (ou `gh workflow run ci-cd.yml --ref main`).
+
+Prérequis : le CLI `gh` doit être installé et votre token GitHub doit avoir
+les droits nécessaires (ex: `repo` + `workflow` pour un dépôt privé).

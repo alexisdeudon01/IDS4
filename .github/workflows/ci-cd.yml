@@ -177,9 +177,9 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          # Créer répertoire destination
+          # Créer répertoire destination (sudo requis pour /opt)
           ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
-            "mkdir -p $DEPLOY_PATH"
+            "sudo mkdir -p $DEPLOY_PATH && sudo chown -R $DEPLOY_USER:$DEPLOY_USER $DEPLOY_PATH"
           
           # Upload des fichiers
           scp -i ~/.ssh/id_rsa -r deploy_package/* \
@@ -187,8 +187,8 @@ jobs:
           
           # Permissions
           ssh -i ~/.ssh/id_rsa $DEPLOY_USER@$DEPLOY_HOST \
-            "chmod -R 755 $DEPLOY_PATH && \
-             chown -R $DEPLOY_USER:$DEPLOY_USER $DEPLOY_PATH"
+            "sudo chmod -R 755 $DEPLOY_PATH && \
+             sudo chown -R $DEPLOY_USER:$DEPLOY_USER $DEPLOY_PATH"
       
       - name: 🚀 Restart IDS Service
         env:
