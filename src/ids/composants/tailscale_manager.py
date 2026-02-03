@@ -734,6 +734,7 @@ volumes:
                 created_at=_utcnow(),
                 tags=deploy_config.tags,
                 advertised_routes=deploy_config.advertise_routes,
+                metadata={"compose_file": str(compose_path)},
             )
 
             return DeploymentResult(
@@ -811,7 +812,11 @@ volumes:
                 run_remote(f"docker stop tailscale-{hostname}")
                 run_remote(f"docker rm tailscale-{hostname}")
             elif mode == DeploymentMode.DOCKER_COMPOSE:
-                run_remote(f"docker compose -f /tmp/tailscale-compose.yml down")
+                # Get compose file path from metadata or use default
+                compose_file = "/tmp/tailscale-compose.yml"
+                if node and node.metadata.get("compose_file"):
+                    compose_file = node.metadata["compose_file"]
+                run_remote(f"docker compose -f {compose_file} down")
             else:
                 # Linux service
                 run_remote("sudo tailscale logout")
@@ -861,11 +866,13 @@ volumes:
 
             nodes = []
             for device in devices:
+                addresses = device.get("addresses") or []
+                tailnet_ip = addresses[0] if addresses else None
                 node = TailscaleNode(
                     hostname=device.get("hostname", "unknown"),
                     node_id=device.get("id"),
-                    ip_addresses=device.get("addresses", []),
-                    tailnet_ip=device.get("addresses", [None])[0] if device.get("addresses") else None,
+                    ip_addresses=addresses,
+                    tailnet_ip=tailnet_ip,
                     status=NodeStatus.ONLINE if device.get("online") else NodeStatus.OFFLINE,
                     authorized=device.get("authorized", False),
                     last_seen=datetime.fromisoformat(device["lastSeen"].replace("Z", "+00:00"))
@@ -897,7 +904,7 @@ volumes:
             return ConditionSante(
                 nom_composant=self.nom_composant,
                 sain=tailscale_ok,
-                message="Tailscale connecte" if tailscale_ok else "Tailscale deconnecte",
+                message="Tailscale connecté" if tailscale_ok else "Tailscale déconnecté",
                 details={
                     "tailscale_installed": caps.tailscale_installed,
                     "tailscale_running": caps.tailscale_running,
@@ -909,7 +916,7 @@ volumes:
             return ConditionSante(
                 nom_composant=self.nom_composant,
                 sain=False,
-                message=f"Erreur verification sante: {e}",
+                message=f"Erreur vérification santé: {e}",
                 details={"error": str(e)},
             )
 
