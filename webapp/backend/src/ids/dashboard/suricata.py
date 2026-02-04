@@ -105,7 +105,6 @@ class SuricataLogMonitor:
         if self._suricata_log:
             async for alert in self._tail_with_suricatalog():
                 yield alert
-            return
 
         while self._running:
             try:
