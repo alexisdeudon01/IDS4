@@ -15,13 +15,12 @@ except ImportError as exc:  # pragma: no cover - runtime safeguard
     ) from exc
 
 from ..domain import ConfigurationIDS
-from ..composants import (
-    ConnectivityChecker,
-    DockerManager,
-    MetricsCollector,
-    ResourceController,
-    VectorManager,
-)
+# Import directly from modules to avoid circular import
+from ..composants.connectivity import ConnectivityTester as ConnectivityChecker
+from ..composants.docker_manager import DockerManager
+from ..composants.metrics_server import MetricsCollector
+from ..composants.resource_controller import ResourceController
+from ..composants.vector_manager import VectorManager
 from ..config.loader import ConfigManager
 from ..interfaces import (
     AlerteSource,
