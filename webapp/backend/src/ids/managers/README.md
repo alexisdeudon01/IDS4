@@ -163,7 +163,7 @@ from ids.managers import RaspberryPiManager
 with RaspberryPiManager(
     host="100.118.244.54",
     user="pi",
-    ssh_key_path="~/.ssh/pi_github_actions"
+    ssh_key_path="~/.ssh/pi_ssh_key"
 ) as pi:
     # Infos système
     info = pi.get_system_info()

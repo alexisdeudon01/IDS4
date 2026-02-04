@@ -88,14 +88,14 @@ python scripts/improve_pipeline.py --target-score 98.0
 
 ---
 
-## 🔄 Workflow Integration
+## 🔄 Automation (optional)
 
-These scripts are integrated into the CI/CD pipeline via `.github/workflows/uml-generation.yml`:
+These scripts can be integrated into your automation pipeline:
 
 - ✅ Automatic UML generation on code changes
-- ✅ Architecture analysis on every commit
+- ✅ Architecture analysis on commits
 - ✅ Quality metrics tracking
-- ✅ Artifacts stored for 90 days
+- ✅ Artifacts storage
 
 ---
 
@@ -137,16 +137,16 @@ python scripts/improve_pipeline.py
 #    - Verify health score improved
 ```
 
-### CI/CD Integration
+### Automation Integration
 
-The scripts run automatically on:
-- Push to main/dev/develop branches
-- Pull requests
-- Manual workflow dispatch
+The scripts can run automatically with your automation system:
+- On code commits
+- On pull/merge requests
+- On manual triggers
 
 View results in:
-- GitHub Actions artifacts
-- PR comments (future)
+- Build artifacts
+- Reports (future)
 - Metrics dashboard (future)
 
 ---

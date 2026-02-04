@@ -264,7 +264,7 @@ def sync_endpoint_files(paths: RepoPaths, ssh_config: SSHConfig) -> bool:
         (paths.root / "requirements.txt", ssh_config.remote_dir / "requirements.txt"),
         (paths.root / "src", ssh_config.remote_dir / "src"),
     ]
-    excludes = ["__pycache__", "*.pyc", ".venv", ".git", "dist"]
+    excludes = ["__pycache__", "*.pyc", ".venv", "dist"]
     for local_path, remote_path in entries:
         remote_parent = remote_path if local_path.is_dir() else remote_path.parent
         run_ssh(ssh_config, f"mkdir -p {shlex.quote(str(remote_parent))}", check=True)

@@ -48,7 +48,6 @@ run_remote_sudo() {
 echo "📦 Préparation du paquet..."
 ARCHIVE_PATH="$(mktemp -t ids-dashboard-XXXXXX.tar.gz)"
 tar \
-  --exclude=.git \
   --exclude=webapp/frontend/node_modules \
   --exclude=webapp/backend/.venv \
   --exclude=webapp/backend/venv \

@@ -17,7 +17,7 @@ if [[ "$VERBOSE" == "1" ]]; then
 fi
 
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10)
-RSYNC_OPTS=(-avz --delete --exclude '__pycache__' --exclude '*.pyc' --exclude '.venv' --exclude 'dist' --exclude '.git')
+RSYNC_OPTS=(-avz --delete --exclude '__pycache__' --exclude '*.pyc' --exclude '.venv' --exclude 'dist')
 
 echo "==> Create remote dir"
 ssh -t "${SSH_OPTS[@]}" "${PI_USER}@${PI_IP}" \

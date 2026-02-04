@@ -16,7 +16,7 @@ Ce guide vous accompagne dans la création et configuration de votre réseau Tai
 │        ↑           VPN           ↑                          │
 │        │         chiffré         │                          │
 │        ↓                         ↓                          │
-│   🤖 GitHub Actions  ←────→  ☁️ Cloud                      │
+│   🤖 Automatisation  ←────→  ☁️ Cloud                      │
 │                                                             │
 │   Tous sur IPs privées: 100.x.x.x                          │
 └─────────────────────────────────────────────────────────────┘
@@ -58,7 +58,7 @@ sudo tailscale up
 ```
 
 Une URL s'affichera. Ouvrez-la dans votre navigateur pour :
-1. **Créer un compte** (si vous n'en avez pas) via Google, GitHub, ou Microsoft
+1. **Créer un compte** (si vous n'en avez pas) via Google, Microsoft, ou un autre fournisseur
 2. **Autoriser l'appareil** à rejoindre votre tailnet
 
 Le tailnet est créé automatiquement avec votre premier appareil !
@@ -107,19 +107,13 @@ tailscale status
 2. Cliquez **"Generate API key"**
 3. Notez la clé (commence par `tskey-api-...`)
 
-## Étape 5: Configurer les Secrets GitHub
+## Étape 5: Configurer les variables d’environnement
 
-Utilisez le script interactif :
+Définissez ces variables (dans votre shell, fichier `.env`, ou gestionnaire de secrets) :
 
-```bash
-./scripts/gh_codespaces_set_secrets.sh
-```
-
-Ou manuellement, définissez ces secrets :
-
-| Secret | Description | Exemple |
-|--------|-------------|---------|
-| `TAILSCALE_TAILNET` | Nom de votre tailnet | `votre-email.github` |
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `TAILSCALE_TAILNET` | Nom de votre tailnet | `example.com` |
 | `TAILSCALE_API_KEY` | Clé API | `tskey-api-xxx` |
 | `TAILSCALE_OAUTH_CLIENT_ID` | OAuth Client ID | `kxxx` |
 | `TAILSCALE_OAUTH_CLIENT_SECRET` | OAuth Secret | `tskey-client-xxx` |
@@ -179,7 +173,7 @@ sudo systemctl enable tailscaled
 ## Architecture du Projet avec Tailscale
 
 ```
-GitHub Actions Runner
+Runner d’automatisation (optionnel)
         │
         │ (OAuth: tag:ci)
         ▼
@@ -201,7 +195,6 @@ GitHub Actions Runner
 | `scripts/tailscale_setup.sh` | Installation et configuration |
 | `scripts/tailscale_verify.py` | Vérification complète |
 | `scripts/tailnet_monitor.py` | Visualisation du réseau |
-| `scripts/gh_codespaces_set_secrets.sh` | Configuration des secrets |
 
 ## Liens Utiles
 

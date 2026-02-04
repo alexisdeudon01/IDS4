@@ -83,7 +83,7 @@ python3 tailscale_network_monitor.py
 
 Vous serez invité à saisir :
 1. **Tailscale API Key** (saisie cachée)
-2. **Tailnet Name** (ex: `example.com` ou `user@github`)
+2. **Tailnet Name** (ex: `example.com` ou `user@example.com`)
 
 ### Exemple de sortie
 ```
@@ -92,7 +92,7 @@ Vous serez invité à saisir :
 ============================================================
 
 🔑 Enter Tailscale API Key: 
-🏢 Enter Tailnet Name (e.g., example.com or user@github): mycompany.com
+🏢 Enter Tailnet Name (e.g., example.com or user@example.com): mycompany.com
 
 🔍 Fetching device list from Tailscale API...
 ✅ Found 5 nodes (4 online)
@@ -145,21 +145,15 @@ Le script crée un fichier `tailscale_network_map.html` :
 - **Lien épais** : Faible latence (bonne connexion)
 - **Lien fin** : Latence élevée ou pas de données
 
-## 🔧 Intégration dans le CI/CD
+## 🔧 Intégration dans l'automation
 
-Le script peut être utilisé dans le workflow GitHub Actions pour valider la connectivité du mesh :
+Le script peut être utilisé dans votre pipeline d'automation pour valider la connectivité du mesh :
 
-```yaml
-- name: 🌐 Tailscale Network Health Check
-  env:
-    TAILSCALE_API_KEY: ${{ secrets.TAILSCALE_API_KEY }}
-    TAILSCALE_TAILNET: ${{ secrets.TAILSCALE_TAILNET }}
-  run: |
-    python3 scripts/tailscale_network_monitor.py \
-      --non-interactive \
-      --api-key "$TAILSCALE_API_KEY" \
-      --tailnet "$TAILSCALE_TAILNET" \
-      --output network_snapshot.json
+```bash
+# Exemple avec variables d'environnement
+export TAILSCALE_API_KEY="tskey-api-..."
+export TAILSCALE_TAILNET="yourname.ts.net"
+python3 scripts/tailscale_monitor.py --output network_snapshot.html
 ```
 
 ## 🐛 Dépannage

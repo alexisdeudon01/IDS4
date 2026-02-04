@@ -32,7 +32,7 @@ class TailscaleLibraryClient(BaseAPIClient):
         Initialize the client.
 
         Args:
-            tailnet: Tailnet name (e.g., "example.com" or "user@github")
+            tailnet: Tailnet name (e.g., "example.com" or "user@example.com")
             api_key: Tailscale API key (tskey-api-...)
         """
         if not TAILSCALE_LIB_AVAILABLE:

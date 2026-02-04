@@ -13,10 +13,6 @@ Agent IDS distribué pour Raspberry Pi avec monitoring Tailscale mesh network.
 ### Installation
 
 ```bash
-# Clone le projet
-git clone https://github.com/alexisdeudon01/oi.git
-cd oi
-
 # Installe les dépendances
 pip install -r webapp/backend/requirements.txt
 
@@ -36,7 +32,7 @@ python scripts/monitor_tailnet.py
 # Depuis le code
 from ids.monitoring import TailnetMonitor
 
-monitor = TailnetMonitor(api_key="tskey-...", tailnet_name="yourname.github")
+monitor = TailnetMonitor(api_key="tskey-...", tailnet_name="yourname.ts.net")
 snapshot = monitor.get_current_state()
 snapshot = monitor.measure_mesh_latency(snapshot)
 monitor.generate_interactive_graph(snapshot)
@@ -52,35 +48,18 @@ monitor.generate_interactive_graph(snapshot)
 
 ## 🔐 Configuration des Secrets
 
-### GitHub Codespaces
+### Variables d'environnement
 
 ```bash
-# Mode interactif (recommandé)
-./scripts/gh_codespaces_set_secrets.sh --repo alexisdeudon01/oi
-
-# Mode non-interactif
-PI_IP="100.118.244.54" \
-PI_USER="pi" \
-TS_OAUTH_CLIENT_ID="..." \
-TS_OAUTH_CLIENT_SECRET="..." \
-TAILSCALE_TAILNET="yourname.github" \
-TAILSCALE_API_KEY="tskey-..." \
-AWS_ACCESS_KEY_ID="..." \
-AWS_SECRET_ACCESS_KEY="..." \
-AWS_REGION="eu-central-1" \
-./scripts/gh_codespaces_set_secrets.sh --repo alexisdeudon01/oi
-```
-
-### Synchronisation vers GitHub Actions
-
-```bash
-./scripts/gh_actions_sync_secrets.sh --repo alexisdeudon01/oi
-```
-
-### Bootstrap complet (tout-en-un)
-
-```bash
-./scripts/gh_actions_bootstrap.sh --repo alexisdeudon01/oi
+export PI_IP="100.118.244.54"
+export PI_USER="pi"
+export TS_OAUTH_CLIENT_ID="..."
+export TS_OAUTH_CLIENT_SECRET="..."
+export TAILSCALE_TAILNET="yourname.ts.net"
+export TAILSCALE_API_KEY="tskey-..."
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_REGION="eu-central-1"
 ```
 
 ## 🔧 Secrets Requis
@@ -89,10 +68,10 @@ AWS_REGION="eu-central-1" \
 |--------|-------------|---------|
 | `PI_IP` | IP Tailscale du Pi | `100.118.244.54` |
 | `PI_USER` | User SSH du Pi | `pi` |
-| `PI` | Clé SSH privée | (contenu de `~/.ssh/pi_github_actions`) |
+| `PI` | Clé SSH privée | (contenu de `~/.ssh/pi_ssh_key`) |
 | `TS_OAUTH_CLIENT_ID` | OAuth client ID Tailscale | `k...` |
 | `TS_OAUTH_CLIENT_SECRET` | OAuth client secret | `tskey-client-...` |
-| `TAILSCALE_TAILNET` | Nom du tailnet | `yourname.github` |
+| `TAILSCALE_TAILNET` | Nom du tailnet | `yourname.ts.net` |
 | `TAILSCALE_API_KEY` | API key Tailscale | `tskey-api-...` |
 | `AWS_ACCESS_KEY_ID` | AWS access key | `AKIA...` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | `...` |
@@ -119,15 +98,6 @@ pytest --cov=src/ids --cov-report=html
 ```
 
 ## 🚢 Déploiement
-
-### Via GitHub Actions (automatique)
-
-Le workflow CI/CD se déclenche sur push vers `main` ou `dev` :
-
-1. **Job connectivity** : vérifie Tailscale + AWS + génère le Network Health Map
-2. **Job test** : tests unitaires + intégration
-3. **Job code-quality** : linting (non bloquant)
-4. **Job deploy** : déploiement sur le Pi via Tailscale
 
 ### Manuel
 
@@ -156,35 +126,13 @@ oi/
 │   └── interfaces/          # Interfaces/protocols
 ├── scripts/
 │   ├── monitor_tailnet.py   # Script monitoring standalone
-│   ├── gh_actions_bootstrap.sh
-│   ├── gh_codespaces_set_secrets.sh
-│   └── gh_actions_sync_secrets.sh
+│   └── manage_infrastructure.py
 ├── tests/
 │   ├── unit/
 │   └── integration/
-├── .github/workflows/
-│   └── ci-cd.yml
 ├── webapp/backend/requirements.txt
 └── config.yaml
 ```
-
-## 🔍 Monitoring en Production
-
-Le **Network Health Map** est généré automatiquement à chaque run du workflow CI/CD et disponible en artifact GitHub Actions pendant 7 jours.
-
-### Accès au Health Map
-
-1. Va dans **Actions** → dernier workflow run
-2. Télécharge l'artifact `network-health-map`
-3. Ouvre `network_health_map.html` dans un navigateur
-
-### Interprétation
-
-- **Nœud vert** : online
-- **Nœud rouge** : offline
-- **Taille du nœud** : inversement proportionnelle à la latence
-- **Hover** : affiche les détails (OS, IP, latency, tags)
-- **Clic** : ouvre la console Tailscale du device
 
 ## 🛠️ Développement
 
@@ -211,8 +159,3 @@ MIT
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! Ouvre une issue ou une PR.
-
-## 📧 Contact
-
-- GitHub: [@alexisdeudon01](https://github.com/alexisdeudon01)
-- Repo: https://github.com/alexisdeudon01/oi

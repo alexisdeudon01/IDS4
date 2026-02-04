@@ -326,8 +326,8 @@ def main():
         host = input("Pi IP (default: 100.118.244.54): ").strip() or "100.118.244.54"
         user = input("Pi User (default: pi): ").strip() or "pi"
         ssh_key = (
-            input("SSH Key Path (default: ~/.ssh/pi_github_actions): ").strip()
-            or "~/.ssh/pi_github_actions"
+            input("SSH Key Path (default: ~/.ssh/pi_ssh_key): ").strip()
+            or "~/.ssh/pi_ssh_key"
         )
         ssh_key = str(Path(ssh_key).expanduser())
 

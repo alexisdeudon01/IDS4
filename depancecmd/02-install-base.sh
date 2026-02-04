@@ -8,6 +8,5 @@ apt-get install -y \
   curl \
   gnupg \
   lsb-release \
-  git \
   build-essential \
   jq

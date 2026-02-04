@@ -58,7 +58,6 @@ def run_command(client: paramiko.SSHClient, command: str, sudo_password: str | N
 
 def upload_repo(client: paramiko.SSHClient, local_root: Path, remote_root: str) -> None:
     ignore_dir_names = {
-        ".git",
         "__pycache__",
         ".pytest_cache",
         ".mypy_cache",

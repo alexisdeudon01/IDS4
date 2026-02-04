@@ -228,7 +228,7 @@ Verify:
 - Dashboard binds to `0.0.0.0` by default (accessible from network)
 - In production, use reverse proxy (nginx) with SSL
 - Restrict CORS origins in production
-- Secure API keys in `.env` file (never commit to git)
+- Secure API keys in `.env` file (never store them in the repository)
 
 ## License
 

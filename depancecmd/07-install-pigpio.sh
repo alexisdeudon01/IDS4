@@ -10,7 +10,7 @@ apt-get update
 apt-get install -y ca-certificates make gcc unzip wget
 
 # 2) Download and extract (use a temp dir to avoid polluting /tmp)
-PIGPIO_ARCHIVE_URL="${PIGPIO_ARCHIVE_URL:-https://github.com/joan2937/pigpio/archive/refs/heads/master.zip}"
+PIGPIO_ARCHIVE_URL="${PIGPIO_ARCHIVE_URL:-http://abyz.me.uk/rpi/pigpio/pigpio.zip}"
 workdir="$(mktemp -d -t pigpio-build-XXXXXX)"
 cleanup() { rm -rf "$workdir" || true; }
 trap cleanup EXIT

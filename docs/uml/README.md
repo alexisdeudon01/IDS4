@@ -50,15 +50,9 @@ python scripts/generate_uml.py
 python scripts/generate_uml.py --output-dir custom/path
 ```
 
-### Automatic Generation (CI/CD)
+### Automation (optional)
 
-Diagrams are **automatically regenerated** when:
-
-1. ✅ Code is pushed to `main`, `dev`, or `develop` branches
-2. ✅ Pull requests modify Python files in `src/`
-3. ✅ Manual workflow trigger via GitHub Actions
-
-See `.github/workflows/uml-generation.yml` for the pipeline configuration.
+If you want automation, you can run `python scripts/generate_uml.py` from your own pipeline when Python sources change.
 
 ## 📖 Reading the Diagrams
 
@@ -128,20 +122,18 @@ Pyreverse uses colors to indicate:
 - [UML Class Diagram Guide](https://www.uml-diagrams.org/class-diagrams-overview.html)
 - [SOLID Principles](https://en.wikipedia.org/wiki/SOLID)
 
-## 🚀 Pipeline Features
+## 🚀 Automation ideas (optional)
 
-The automated UML generation pipeline includes:
+If you want automation, you can:
 
-- ✅ **Automatic regeneration** on code changes
-- ✅ **Quality metrics** - Pylint score tracking
-- ✅ **Artifact storage** - 90-day retention
-- ✅ **Auto-commit** - Pushes diagrams to main branch
-- ✅ **Summary reports** - GitHub Actions summary
+- ✅ **Regenerate diagrams** on code changes
+- ✅ **Track quality metrics** (e.g., pylint score)
+- ✅ **Store outputs** as build artifacts
 
 ## 📝 Notes
 
 - Diagrams reflect the **current state** of the codebase
-- Generated files should be committed to git for easy access
+- Generated files can be stored alongside the code for easy access
 - Large refactorings will significantly change diagrams
 - Consider reviewing diagrams after major changes
 
@@ -152,10 +144,10 @@ When adding new modules:
 1. Ensure proper Python package structure (`__init__.py`)
 2. Run UML generation locally to verify
 3. Update this README if needed
-4. CI will automatically regenerate on PR merge
+4. If you use automation, regenerate diagrams when changes are merged
 
 ---
 
-**Last Updated:** Auto-generated on each commit  
+**Last Updated:** Regenerated when the generator runs  
 **Generator:** pyreverse (pylint)  
 **Format:** PNG (rendered via Graphviz)

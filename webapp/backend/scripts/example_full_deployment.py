@@ -43,7 +43,7 @@ async def deploy_full_stack():
     pi_ip = input("Pi Tailscale IP (default: 100.118.244.54): ").strip() or "100.118.244.54"
     pi_user = input("Pi User (default: pi): ").strip() or "pi"
     pi_ssh_key = (
-        input("SSH Key (default: ~/.ssh/pi_github_actions): ").strip() or "~/.ssh/pi_github_actions"
+        input("SSH Key (default: ~/.ssh/pi_ssh_key): ").strip() or "~/.ssh/pi_ssh_key"
     )
     pi_ssh_key = str(Path(pi_ssh_key).expanduser())
 

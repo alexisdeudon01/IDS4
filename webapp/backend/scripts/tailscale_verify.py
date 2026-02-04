@@ -111,7 +111,7 @@ async def get_tailnet_info(tailnet: str, api_key: str) -> TailnetInfo:
     Récupère les informations du tailnet via l'API Tailscale.
 
     Args:
-        tailnet: Nom du tailnet (ex: "example.com" ou "user@gmail.com")
+        tailnet: Nom du tailnet (ex: "example.com" ou "user@example.com")
         api_key: Clé API Tailscale (tskey-api-...)
 
     Returns:
@@ -340,7 +340,7 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
             print_info("Vérifiez que l'appareil est en ligne et autorisé")
 
     # Valeurs de configuration
-    print_header("Configuration pour GitHub Actions")
+    print_header("Configuration pour l'automation")
 
     print(f"{Colors.BOLD}Secrets à configurer:{Colors.NC}")
     print()
@@ -362,9 +362,9 @@ async def run_verification(tailnet: str, api_key: str, target_ip: Optional[str] 
 
     print()
     print(f"{Colors.BOLD}Liens utiles:{Colors.NC}")
-    print(f"  • API Key: {Colors.BLUE}https://login.tailscale.com/admin/settings/keys{Colors.NC}")
-    print(f"  • OAuth:   {Colors.BLUE}https://login.tailscale.com/admin/settings/oauth{Colors.NC}")
-    print(f"  • Machines:{Colors.BLUE}https://login.tailscale.com/admin/machines{Colors.NC}")
+    print(f"  • API Key:  {Colors.BLUE}https://login.tailscale.com/admin/settings/keys{Colors.NC}")
+    print(f"  • OAuth:    {Colors.BLUE}https://login.tailscale.com/admin/settings/oauth{Colors.NC}")
+    print(f"  • Machines: {Colors.BLUE}https://login.tailscale.com/admin/machines{Colors.NC}")
 
     print()
     print_success("Vérification terminée!")
@@ -392,7 +392,7 @@ def main() -> int:
         print("Vous pouvez trouver votre tailnet sur:")
         print(f"  {Colors.BLUE}https://login.tailscale.com/admin{Colors.NC}")
         print()
-        tailnet = input("Nom du tailnet (ex: example.com ou user@gmail.com): ").strip()
+        tailnet = input("Nom du tailnet (ex: example.com ou user@example.com): ").strip()
 
         if not tailnet:
             print_error("Tailnet requis")
