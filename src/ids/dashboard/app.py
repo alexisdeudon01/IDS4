@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -35,11 +35,18 @@ from .network import NetworkMonitor
 from .setup import OpenSearchSetup, TailnetSetup, setup_infrastructure
 from .suricata import SuricataLogMonitor
 from .tailscale import TailscaleMonitor
+from ids.storage import crud, get_session, init_db, models, schemas
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
 # Global state
 dashboard_state: dict[str, Any] = {}
+
+
+def _schema_from_model(schema_cls, instance):
+    data = {field: getattr(instance, field) for field in schema_cls.model_fields}
+    return schema_cls(**data)
 
 
 @asynccontextmanager
@@ -314,8 +321,11 @@ def create_dashboard_app() -> FastAPI:
             if health:
                 es_status = health.status
 
+        db = next(get_session())
+        pi_config = crud.get_or_create_singleton(db, models.RaspberryPiConfig)
+        db.close()
         return PipelineStatus(
-            interface=os.getenv("MIRROR_INTERFACE", "eth0"),
+            interface=pi_config.network_interface or os.getenv("MIRROR_INTERFACE", "eth0"),
             suricata=suricata_status,
             vector=vector_status,
             elasticsearch=es_status,
@@ -330,6 +340,146 @@ def create_dashboard_app() -> FastAPI:
             return []
 
         return await tailscale.get_nodes()
+
+    @app.get("/api/config/secrets")
+    async def get_secrets_config(db: Session = Depends(get_session)) -> schemas.SecretsSchema:
+        secrets = crud.get_or_create_singleton(db, models.Secrets)
+        return _schema_from_model(schemas.SecretsSchema, secrets)
+
+    @app.put("/api/config/secrets")
+    async def update_secrets_config(
+        payload: schemas.SecretsSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.SecretsSchema:
+        secrets = crud.get_or_create_singleton(db, models.Secrets)
+        crud.update_model(secrets, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(secrets)
+        return _schema_from_model(schemas.SecretsSchema, secrets)
+
+    @app.get("/api/config/aws")
+    async def get_aws_config(db: Session = Depends(get_session)) -> schemas.AwsConfigSchema:
+        config = crud.get_or_create_singleton(db, models.AwsConfig)
+        return _schema_from_model(schemas.AwsConfigSchema, config)
+
+    @app.put("/api/config/aws")
+    async def update_aws_config(
+        payload: schemas.AwsConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.AwsConfigSchema:
+        config = crud.get_or_create_singleton(db, models.AwsConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.AwsConfigSchema, config)
+
+    @app.get("/api/config/raspberry-pi")
+    async def get_pi_config(
+        db: Session = Depends(get_session),
+    ) -> schemas.RaspberryPiConfigSchema:
+        config = crud.get_or_create_singleton(db, models.RaspberryPiConfig)
+        return _schema_from_model(schemas.RaspberryPiConfigSchema, config)
+
+    @app.put("/api/config/raspberry-pi")
+    async def update_pi_config(
+        payload: schemas.RaspberryPiConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.RaspberryPiConfigSchema:
+        config = crud.get_or_create_singleton(db, models.RaspberryPiConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.RaspberryPiConfigSchema, config)
+
+    @app.get("/api/config/suricata")
+    async def get_suricata_config(
+        db: Session = Depends(get_session),
+    ) -> schemas.SuricataConfigSchema:
+        config = crud.get_or_create_singleton(db, models.SuricataConfig)
+        return _schema_from_model(schemas.SuricataConfigSchema, config)
+
+    @app.put("/api/config/suricata")
+    async def update_suricata_config(
+        payload: schemas.SuricataConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.SuricataConfigSchema:
+        config = crud.get_or_create_singleton(db, models.SuricataConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.SuricataConfigSchema, config)
+
+    @app.get("/api/config/vector")
+    async def get_vector_config(db: Session = Depends(get_session)) -> schemas.VectorConfigSchema:
+        config = crud.get_or_create_singleton(db, models.VectorConfig)
+        return _schema_from_model(schemas.VectorConfigSchema, config)
+
+    @app.put("/api/config/vector")
+    async def update_vector_config(
+        payload: schemas.VectorConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.VectorConfigSchema:
+        config = crud.get_or_create_singleton(db, models.VectorConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.VectorConfigSchema, config)
+
+    @app.get("/api/config/tailscale")
+    async def get_tailscale_config(
+        db: Session = Depends(get_session),
+    ) -> schemas.TailscaleConfigSchema:
+        config = crud.get_or_create_singleton(db, models.TailscaleConfig)
+        return _schema_from_model(schemas.TailscaleConfigSchema, config)
+
+    @app.put("/api/config/tailscale")
+    async def update_tailscale_config(
+        payload: schemas.TailscaleConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.TailscaleConfigSchema:
+        config = crud.get_or_create_singleton(db, models.TailscaleConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.TailscaleConfigSchema, config)
+
+    @app.get("/api/config/fastapi")
+    async def get_fastapi_config(
+        db: Session = Depends(get_session),
+    ) -> schemas.FastapiConfigSchema:
+        config = crud.get_or_create_singleton(db, models.FastapiConfig)
+        return _schema_from_model(schemas.FastapiConfigSchema, config)
+
+    @app.put("/api/config/fastapi")
+    async def update_fastapi_config(
+        payload: schemas.FastapiConfigSchema,
+        db: Session = Depends(get_session),
+    ) -> schemas.FastapiConfigSchema:
+        config = crud.get_or_create_singleton(db, models.FastapiConfig)
+        crud.update_model(config, payload.model_dump(exclude_unset=True))
+        db.commit()
+        db.refresh(config)
+        return _schema_from_model(schemas.FastapiConfigSchema, config)
+
+    @app.get("/api/systemd/services")
+    async def list_systemd_services() -> list[dict]:
+        """List systemd services and status."""
+        services = ["suricata", "vector", "ids-dashboard", "docker", "tailscaled"]
+        results = []
+        for service in services:
+            try:
+                result = await asyncio.to_thread(
+                    lambda: __import__("subprocess").run(
+                        ["systemctl", "is-active", service],
+                        capture_output=True,
+                        text=True,
+                    )
+                )
+                status = result.stdout.strip() or "unknown"
+            except Exception:
+                status = "unknown"
+            results.append({"service": service, "status": status})
+        return results
 
     @app.post("/api/ai-healing/diagnose")
     async def diagnose_error(
@@ -369,7 +519,7 @@ def create_dashboard_app() -> FastAPI:
     # ============================================================================
 
     @app.get("/api/setup/tailnet/verify")
-    async def verify_tailnet() -> dict:
+    async def verify_tailnet(db: Session = Depends(get_session)) -> dict:
         """Verify Tailscale tailnet configuration."""
         api_key = os.getenv("TAILSCALE_API_KEY")
         tailnet = os.getenv("TAILSCALE_TAILNET")  # Optionnel
@@ -388,6 +538,7 @@ def create_dashboard_app() -> FastAPI:
         reusable: bool = True,
         ephemeral: bool = False,
         tags: list[str] | None = None,
+        db: Session = Depends(get_session),
     ) -> dict:
         """Create a Tailscale auth key."""
         api_key = os.getenv("TAILSCALE_API_KEY")
@@ -403,10 +554,12 @@ def create_dashboard_app() -> FastAPI:
         return await setup.create_auth_key(reusable=reusable, ephemeral=ephemeral, tags=tags)
 
     @app.get("/api/setup/opensearch/verify")
-    async def verify_opensearch(domain_name: str | None = None) -> dict:
+    async def verify_opensearch(
+        domain_name: str | None = None,
+        db: Session = Depends(get_session),
+    ) -> dict:
         """Verify OpenSearch domain configuration."""
-        config_path = Path("config.yaml")
-        setup = OpenSearchSetup(config_path)
+        setup = OpenSearchSetup(Path("config.yaml"), session=db)
         return await setup.verify_domain(domain_name)
 
     @app.post("/api/setup/opensearch/create")
@@ -414,10 +567,10 @@ def create_dashboard_app() -> FastAPI:
         domain_name: str | None = None,
         wait: bool = True,
         timeout: int = 1800,
+        db: Session = Depends(get_session),
     ) -> dict:
         """Create OpenSearch domain."""
-        config_path = Path("config.yaml")
-        setup = OpenSearchSetup(config_path)
+        setup = OpenSearchSetup(Path("config.yaml"), session=db)
         return await setup.create_domain(domain_name=domain_name, wait=wait, timeout=timeout)
 
     @app.post("/api/setup/infrastructure")
@@ -446,6 +599,54 @@ def create_dashboard_app() -> FastAPI:
             opensearch_domain=opensearch_domain,
             config_path=config_path,
         )
+
+    @app.post("/api/setup/first-run")
+    async def run_first_access_deployment(db: Session = Depends(get_session)) -> dict:
+        """Run the first access deployment workflow."""
+        deployment = models.DeploymentHistory(
+            deployment_type="initial",
+            component="all",
+            status="in_progress",
+        )
+        db.add(deployment)
+        db.commit()
+        db.refresh(deployment)
+
+        steps = []
+
+        async def run_step(name: str, coro):
+            try:
+                result = await coro
+                steps.append({"step": name, "status": "success", "result": result})
+                return True
+            except Exception as exc:
+                steps.append({"step": name, "status": "failed", "error": str(exc)})
+                return False
+
+        tailnet_setup = TailnetSetup(session=db)
+        opensearch_setup = OpenSearchSetup(Path("config.yaml"), session=db)
+
+        await run_step("tailscale_verify", tailnet_setup.verify_tailnet())
+        await run_step("opensearch_verify", opensearch_setup.verify_domain(None))
+
+        async def start_service(service: str):
+            await asyncio.to_thread(
+                lambda: __import__("subprocess").run(
+                    ["systemctl", "start", service],
+                    capture_output=True,
+                    text=True,
+                )
+            )
+
+        await run_step("start_suricata", start_service("suricata"))
+        await run_step("start_vector", start_service("vector"))
+        await run_step("start_dashboard", start_service("ids-dashboard"))
+
+        deployment.status = "success" if all(step["status"] == "success" for step in steps) else "failed"
+        deployment.completed_at = datetime.now()
+        db.commit()
+
+        return {"deployment_id": deployment.id, "steps": steps, "status": deployment.status}
 
     # Serve static frontend (if available)
     frontend_path = Path(__file__).parent.parent.parent.parent / "frontend" / "dist"

@@ -14,13 +14,22 @@ import os
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.orm import Session
+
+from ids.storage import crud, models
+
 logger = logging.getLogger(__name__)
 
 
 class TailnetSetup:
     """Setup and configure Tailscale tailnet."""
 
-    def __init__(self, tailnet: str | None = None, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        tailnet: str | None = None,
+        api_key: str | None = None,
+        session: Session | None = None,
+    ) -> None:
         """
         Initialize Tailnet setup.
 
@@ -223,6 +232,7 @@ class OpenSearchSetup:
         self,
         config_path: str | Path | None = None,
         secret_path: str | Path | None = None,
+        session: Session | None = None,
     ) -> None:
         """
         Initialize OpenSearch setup.
@@ -239,6 +249,14 @@ class OpenSearchSetup:
 
         self.config_path = Path(config_path)
         self.secret_path = Path(secret_path) if secret_path else None
+        self._session = session
+
+    def _load_db_settings(self) -> tuple[models.AwsConfig | None, models.Secrets | None]:
+        if not self._session:
+            return None, None
+        aws_cfg = crud.get_or_create_singleton(self._session, models.AwsConfig)
+        secrets = crud.get_or_create_singleton(self._session, models.Secrets)
+        return aws_cfg, secrets
 
     async def verify_domain(self, domain_name: str | None = None) -> dict[str, Any]:
         """
@@ -254,11 +272,31 @@ class OpenSearchSetup:
             from ..config.loader import ConfigManager
             from ..deploy.opensearch_domain import _build_client, _build_session, _describe_domain
 
-            config = ConfigManager(str(self.config_path), str(self.secret_path) if self.secret_path else None)
-            session = _build_session(config)
-            client = _build_client(session)
-
-            domain = domain_name or config.obtenir("aws.domain_name") or config.obtenir("aws.opensearch.domain_name")
+            db_cfg, db_secrets = self._load_db_settings()
+            if db_cfg and db_secrets:
+                config = ConfigManager.from_dict(
+                    {
+                        "aws": {
+                            "region": db_cfg.region,
+                            "opensearch_endpoint": db_cfg.opensearch_endpoint,
+                            "domain_name": db_cfg.domain_name,
+                            "access_key_id": db_secrets.aws_access_key_id,
+                            "secret_access_key": db_secrets.aws_secret_access_key,
+                            "session_token": db_secrets.aws_session_token,
+                        },
+                    }
+                )
+                session = _build_session(config)
+                client = _build_client(session)
+                domain = domain_name or db_cfg.domain_name
+            else:
+                config = ConfigManager(
+                    str(self.config_path),
+                    str(self.secret_path) if self.secret_path else None,
+                )
+                session = _build_session(config)
+                client = _build_client(session)
+                domain = domain_name or config.obtenir("aws.domain_name") or config.obtenir("aws.opensearch.domain_name")
             if not domain:
                 return {
                     "configured": False,

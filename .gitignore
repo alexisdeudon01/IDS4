@@ -1,5 +1,7 @@
 .venv/
 scripts/actions_secrets.map
+secret.json
+data/
 
 # Secrets
 secret.json
