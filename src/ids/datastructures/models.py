@@ -1,10 +1,9 @@
 """
-Data models for the IDS Dashboard.
+Data models for the IDS platform.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -101,4 +100,13 @@ class TailscaleNode(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
-# DashboardState is defined in app.py to avoid circular imports
+class MirrorStatus(BaseModel):
+    """Port mirroring verification status."""
+
+    configured: bool
+    active: bool
+    source_port: str | None = None
+    mirror_port: str | None = None
+    message: str | None = None
+    status_code: int | None = None
+    checked_at: datetime | None = None

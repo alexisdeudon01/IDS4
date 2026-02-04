@@ -12,7 +12,7 @@ from typing import Any
 
 import psutil
 
-from .models import NetworkStats
+from ids.datastructures import NetworkStats
 
 logger = logging.getLogger(__name__)
 

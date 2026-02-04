@@ -9,13 +9,38 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncIterator
+from typing import Any, AsyncIterator, Iterable
 
-from .models import AlertEvent
+from ids.datastructures import AlertEvent
 
 logger = logging.getLogger(__name__)
 
 SURICATA_EVE_LOG = Path("/var/log/suricata/eve.json")
+
+SURICATALOG_AVAILABLE = False
+PYEVE_AVAILABLE = False
+PYTHON_SURICATA_AVAILABLE = False
+SuricataLogClient = None
+try:
+    from SuricataLog import SuricataLog as SuricataLogClient
+
+    SURICATALOG_AVAILABLE = True
+except ImportError:
+    logger.warning("SuricataLog not available. Install with: pip install SuricataLog")
+
+try:
+    import pyeve
+
+    PYEVE_AVAILABLE = True
+except ImportError:
+    logger.warning("pyeve not available. Install with: pip install pyeve")
+
+try:
+    import suricata
+
+    PYTHON_SURICATA_AVAILABLE = True
+except ImportError:
+    logger.warning("python-suricata not available. Install with: pip install python-suricata")
 
 
 class SuricataLogMonitor:
@@ -27,6 +52,9 @@ class SuricataLogMonitor:
         self._running = False
         self._task: asyncio.Task | None = None
         self._position = 0
+        self._suricata_log: Any | None = None
+        if PYTHON_SURICATA_AVAILABLE and hasattr(suricata, "__version__"):
+            logger.info(f"python-suricata detected (version {suricata.__version__})")
 
     async def start(self) -> None:
         """Start monitoring the log file."""
@@ -39,6 +67,13 @@ class SuricataLogMonitor:
             return
 
         self._running = True
+        if SURICATALOG_AVAILABLE and SuricataLogClient:
+            try:
+                self._suricata_log = SuricataLogClient(str(self.log_path))
+            except Exception as exc:
+                logger.warning(f"Failed to initialize SuricataLog: {exc}")
+                self._suricata_log = None
+
         # Get current file size to start from end
         if self.log_path.exists():
             self._position = self.log_path.stat().st_size
@@ -67,6 +102,11 @@ class SuricataLogMonitor:
             logger.error(f"Log file does not exist: {self.log_path}")
             return
 
+        if self._suricata_log:
+            async for alert in self._tail_with_suricatalog():
+                yield alert
+            return
+
         while self._running:
             try:
                 # Read new lines from current position
@@ -78,35 +118,30 @@ class SuricataLogMonitor:
                         if not line.strip():
                             continue
 
-                        try:
-                            event = json.loads(line)
-                            event_type = event.get("event_type", "")
-
-                            # Only process alert events
-                            if event_type == "alert":
-                                alert_data = event.get("alert", {})
-                                alert_event = AlertEvent(
-                                    timestamp=datetime.fromisoformat(
-                                        event.get("timestamp", "").replace("Z", "+00:00")
-                                    ),
-                                    event_type=event_type,
-                                    src_ip=event.get("src_ip"),
-                                    dest_ip=event.get("dest_ip"),
-                                    alert=alert_data,
-                                    severity=alert_data.get("severity", 0),
-                                    signature=alert_data.get("signature", ""),
-                                )
-                                yield alert_event
-
-                                # Update position after successful read
-                                self._position = f.tell()
-
-                        except json.JSONDecodeError as e:
-                            logger.debug(f"Failed to parse JSON line: {e}")
+                        event = self._parse_event_line(line)
+                        if not event:
                             continue
-                        except Exception as e:
-                            logger.error(f"Error processing event: {e}")
-                            continue
+
+                        event_type = event.get("event_type", "")
+
+                        # Only process alert events
+                        if event_type == "alert":
+                            alert_data = event.get("alert", {})
+                            alert_event = AlertEvent(
+                                timestamp=datetime.fromisoformat(
+                                    event.get("timestamp", "").replace("Z", "+00:00")
+                                ),
+                                event_type=event_type,
+                                src_ip=event.get("src_ip"),
+                                dest_ip=event.get("dest_ip"),
+                                alert=alert_data,
+                                severity=alert_data.get("severity", 0),
+                                signature=alert_data.get("signature", ""),
+                            )
+                            yield alert_event
+
+                            # Update position after successful read
+                            self._position = f.tell()
 
                 # Wait a bit before checking for new data
                 await asyncio.sleep(0.1)
@@ -141,30 +176,100 @@ class SuricataLogMonitor:
                     if not line.strip():
                         continue
 
-                    try:
-                        event = json.loads(line)
-                        if event.get("event_type") == "alert":
-                            alert_data = event.get("alert", {})
-                            alert_event = AlertEvent(
-                                timestamp=datetime.fromisoformat(
-                                    event.get("timestamp", "").replace("Z", "+00:00")
-                                ),
-                                event_type="alert",
-                                src_ip=event.get("src_ip"),
-                                dest_ip=event.get("dest_ip"),
-                                alert=alert_data,
-                                severity=alert_data.get("severity", 0),
-                                signature=alert_data.get("signature", ""),
-                            )
-                            alerts.append(alert_event)
-
-                            if len(alerts) >= limit:
-                                break
-
-                    except (json.JSONDecodeError, KeyError, ValueError):
+                    event = self._parse_event_line(line)
+                    if not event or event.get("event_type") != "alert":
                         continue
+
+                    alert_data = event.get("alert", {})
+                    alert_event = AlertEvent(
+                        timestamp=datetime.fromisoformat(
+                            event.get("timestamp", "").replace("Z", "+00:00")
+                        ),
+                        event_type="alert",
+                        src_ip=event.get("src_ip"),
+                        dest_ip=event.get("dest_ip"),
+                        alert=alert_data,
+                        severity=alert_data.get("severity", 0),
+                        signature=alert_data.get("signature", ""),
+                    )
+                    alerts.append(alert_event)
+
+                    if len(alerts) >= limit:
+                        break
 
         except Exception as e:
             logger.error(f"Error reading recent alerts: {e}")
 
         return list(reversed(alerts))  # Return in chronological order
+
+    def _parse_event_line(self, line: str) -> dict[str, Any] | None:
+        if not line.strip():
+            return None
+
+        if PYEVE_AVAILABLE:
+            try:
+                parser = pyeve.Eve() if hasattr(pyeve, "Eve") else None
+                if parser and hasattr(parser, "loads"):
+                    data = parser.loads(line)
+                elif parser and hasattr(parser, "parse"):
+                    data = parser.parse(line)
+                else:
+                    data = json.loads(line)
+                if isinstance(data, dict):
+                    return data
+            except Exception as e:
+                logger.debug(f"Failed to parse with pyeve: {e}")
+
+        try:
+            return json.loads(line)
+        except json.JSONDecodeError as e:
+            logger.debug(f"Failed to parse JSON line: {e}")
+            return None
+
+    async def _tail_with_suricatalog(self) -> AsyncIterator[AlertEvent]:
+        iterator = self._get_suricatalog_iterator()
+        if not iterator:
+            logger.warning("SuricataLog iterator unavailable, falling back to file tailing")
+            return
+
+        while self._running:
+            try:
+                event = await asyncio.to_thread(next, iterator)
+            except StopIteration:
+                await asyncio.sleep(0.1)
+                continue
+            except Exception as exc:
+                logger.error(f"Error reading SuricataLog stream: {exc}")
+                await asyncio.sleep(0.5)
+                continue
+
+            if isinstance(event, str):
+                event = self._parse_event_line(event)
+            if not isinstance(event, dict):
+                continue
+
+            if event.get("event_type") != "alert":
+                continue
+
+            alert_data = event.get("alert", {})
+            yield AlertEvent(
+                timestamp=datetime.fromisoformat(event.get("timestamp", "").replace("Z", "+00:00")),
+                event_type=event.get("event_type", "alert"),
+                src_ip=event.get("src_ip"),
+                dest_ip=event.get("dest_ip"),
+                alert=alert_data,
+                severity=alert_data.get("severity", 0),
+                signature=alert_data.get("signature", ""),
+            )
+
+    def _get_suricatalog_iterator(self) -> Iterable[Any] | None:
+        if not self._suricata_log:
+            return None
+        for method_name in ("tail", "follow", "__iter__"):
+            if hasattr(self._suricata_log, method_name):
+                method = getattr(self._suricata_log, method_name)
+                try:
+                    return method() if callable(method) else method
+                except Exception as exc:
+                    logger.warning(f"SuricataLog method {method_name} failed: {exc}")
+        return None
