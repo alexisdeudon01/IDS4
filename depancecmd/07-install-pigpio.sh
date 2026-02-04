@@ -20,9 +20,11 @@ echo "⬇️  Downloading pigpio source..."
 wget -qO "$archive" "$PIGPIO_ARCHIVE_URL"
 unzip -q "$archive" -d "$workdir"
 
-src_dir="$(find "$workdir" -maxdepth 1 -type d -name 'pigpio-*' | head -n 1 || true)"
+src_dir="$(find "$workdir" -mindepth 1 -maxdepth 1 -type d -name 'pigpio-*' | head -n 1 || true)"
 if [ -z "$src_dir" ] || [ ! -f "$src_dir/Makefile" ]; then
   echo "❌ Could not locate pigpio source directory after extraction."
+  echo "📂 Debug: top-level entries in $workdir:"
+  ls -la "$workdir" || true
   exit 1
 fi
 

@@ -79,7 +79,6 @@ bandit>=1.7.0  # Security checks
 
 # Code Quality - Complexity Analysis
 radon>=6.0.0  # Cyclomatic complexity, maintainability index
-wily>=1.24.0  # Code complexity tracking over time
 
 # Code Quality - Architecture
 import-linter>=2.0  # Import dependency rules
