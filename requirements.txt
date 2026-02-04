@@ -34,6 +34,16 @@ paramiko>=3.0.0  # SSH client for Raspberry Pi
 # API & Control Plane
 fastapi>=0.110.0  # Status endpoint
 uvicorn>=0.23.0  # ASGI server
+websockets>=12.0  # WebSocket support
+python-multipart>=0.0.6  # Form data parsing
+
+# Dashboard & Monitoring
+psutil>=5.9.0  # System and network monitoring
+elasticsearch>=8.0.0  # Elasticsearch async client
+netmiko>=4.0.0  # Network device automation (SSH)
+gpiozero>=1.6.2  # Raspberry Pi GPIO control
+anthropic>=0.18.0  # Anthropic Claude AI SDK
+httpx>=0.25.0  # Async HTTP client for switch management
 
 # Testing & Quality
 pytest>=7.0.0  # Test framework
