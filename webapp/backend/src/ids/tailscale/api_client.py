@@ -12,7 +12,7 @@ from .models import DeviceState
 
 # Use the Python tailscale library
 try:
-    import tailscale as TailscaleClient
+    from tailscale import Tailscale
 
     TAILSCALE_LIB_AVAILABLE = True
 except ImportError:
