@@ -34,31 +34,93 @@ class TailnetSetup:
         Initialize Tailnet setup.
 
         Args:
-            tailnet: Tailnet name (or from env)
+            tailnet: Tailnet name (or from env, or auto-detected from API key)
             api_key: Tailscale API key (or from env)
         """
-        self._session = session
-        if session:
-            tailscale_cfg = crud.get_or_create_singleton(session, models.TailscaleConfig)
-            secrets = crud.get_or_create_singleton(session, models.Secrets)
-            self.tailnet = tailnet or tailscale_cfg.tailnet or os.getenv("TAILSCALE_TAILNET")
-            self.api_key = api_key or secrets.tailscale_api_key or os.getenv("TAILSCALE_API_KEY")
-        else:
-            self.tailnet = tailnet or os.getenv("TAILSCALE_TAILNET")
-            self.api_key = api_key or os.getenv("TAILSCALE_API_KEY")
+        self.api_key = api_key or os.getenv("TAILSCALE_API_KEY")
+        self.tailnet = tailnet or os.getenv("TAILSCALE_TAILNET")
+
+    async def _detect_tailnet_from_api_key(self) -> str | None:
+        """
+        Détecte automatiquement le tailnet depuis l'API key.
+        
+        Returns:
+            Nom du tailnet ou None si impossible à détecter
+        """
+        try:
+            import json
+            import urllib.request
+            from urllib.parse import urlparse
+            
+            # L'API Tailscale peut retourner les infos du compte
+            url = "https://api.tailscale.com/api/v2/user/self"
+            parsed = urlparse(url)
+            if parsed.scheme != "https":
+                return None
+            
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+            }
+            
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            # bandit: B310 - URL scheme validated above
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+                response = json.loads(resp.read().decode("utf-8"))
+                # Le tailnet peut être dans loginName ou dans le profil
+                tailnet = response.get("LoginName") or response.get("Profile", {}).get("LoginName")
+                if tailnet:
+                    # Format: user@domain ou juste domain
+                    if "@" in tailnet:
+                        # Extraire le domaine
+                        domain = tailnet.split("@")[1]
+                        return domain
+                    return tailnet
+        except Exception as e:
+            logger.warning(f"Impossible de détecter le tailnet automatiquement: {e}")
+        
+        # Fallback: essayer de lister les devices sans tailnet (peut fonctionner)
+        try:
+            from tailscale import Tailscale
+            # Essayer avec un tailnet générique ou vide
+            async with Tailscale(tailnet="", api_key=self.api_key) as ts:
+                # Si ça fonctionne, on peut extraire le tailnet depuis les devices
+                devices = await ts.devices()
+                if devices and devices.devices:
+                    # Prendre le premier device et extraire son tailnet
+                    first_device = list(devices.devices.values())[0]
+                    # Le tailnet peut être dans les métadonnées
+                    if hasattr(first_device, "tailnet") and first_device.tailnet:
+                        return first_device.tailnet
+        except Exception:
+            pass
+        
+        return None
 
     async def verify_tailnet(self) -> dict[str, Any]:
         """
         Verify tailnet exists and is accessible.
+        Si le tailnet n'est pas configuré, essaie de le détecter automatiquement.
 
         Returns:
             Dictionary with verification results
         """
-        if not self.tailnet or not self.api_key:
+        if not self.api_key:
             return {
                 "configured": False,
-                "error": "Tailnet name or API key not configured",
+                "error": "API key not configured",
             }
+        
+        # Si pas de tailnet, essayer de le détecter
+        if not self.tailnet:
+            detected = await self._detect_tailnet_from_api_key()
+            if detected:
+                self.tailnet = detected
+                logger.info(f"Tailnet auto-détecté: {self.tailnet}")
+            else:
+                return {
+                    "configured": False,
+                    "error": "Tailnet not found and could not be auto-detected. Please set TAILSCALE_TAILNET in secret.json",
+                }
 
         try:
             from tailscale import Tailscale
@@ -97,11 +159,22 @@ class TailnetSetup:
         Returns:
             Dictionary with auth key details
         """
-        if not self.tailnet or not self.api_key:
+        if not self.api_key:
             return {
                 "success": False,
-                "error": "Tailnet name or API key not configured",
+                "error": "API key not configured",
             }
+        
+        # Si pas de tailnet, essayer de le détecter
+        if not self.tailnet:
+            detected = await self._detect_tailnet_from_api_key()
+            if detected:
+                self.tailnet = detected
+            else:
+                return {
+                    "success": False,
+                    "error": "Tailnet not found and could not be auto-detected",
+                }
 
         try:
             import json

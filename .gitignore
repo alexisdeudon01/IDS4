@@ -3,6 +3,9 @@ scripts/actions_secrets.map
 secret.json
 data/
 
+# Secrets
+secret.json
+
 # Python cache
 __pycache__/
 *.py[cod]

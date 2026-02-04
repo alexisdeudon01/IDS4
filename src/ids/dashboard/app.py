@@ -55,21 +55,6 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting IDS Dashboard...")
 
-    # Initialize database
-    init_db()
-    seed_db = next(get_session())
-    for model in (
-        models.Secrets,
-        models.AwsConfig,
-        models.RaspberryPiConfig,
-        models.SuricataConfig,
-        models.VectorConfig,
-        models.TailscaleConfig,
-        models.FastapiConfig,
-    ):
-        crud.get_or_create_singleton(seed_db, model)
-    seed_db.close()
-
     # Initialize components
     dashboard_state["startup_issues"] = []
     dashboard_state["ai_healing"] = AIHealingService(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -87,13 +72,8 @@ async def lifespan(app: FastAPI):
             )
         dashboard_state["startup_issues"].append(response)
 
-    db = next(get_session())
-    suricata_cfg = crud.get_or_create_singleton(db, models.SuricataConfig)
-    pi_cfg = crud.get_or_create_singleton(db, models.RaspberryPiConfig)
-    db.close()
-
     try:
-        dashboard_state["suricata"] = SuricataLogMonitor(log_path=Path(suricata_cfg.log_path))
+        dashboard_state["suricata"] = SuricataLogMonitor()
         await dashboard_state["suricata"].start()
     except Exception as exc:
         logger.error(f"Failed to start Suricata monitor: {exc}")
@@ -111,8 +91,7 @@ async def lifespan(app: FastAPI):
         await record_startup_issue("elasticsearch", exc)
 
     try:
-        mirror_interface = pi_cfg.network_interface or os.getenv("MIRROR_INTERFACE", "eth0")
-        dashboard_state["network"] = NetworkMonitor(interface=mirror_interface)
+        dashboard_state["network"] = NetworkMonitor(interface=os.getenv("MIRROR_INTERFACE", "eth0"))
         promisc_enabled = await dashboard_state["network"].ensure_promiscuous_mode()
         if not promisc_enabled:
             await record_startup_issue(
@@ -129,7 +108,6 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize hardware controller: {exc}")
         await record_startup_issue("hardware", exc)
 
-    tailnet = os.getenv("TAILSCALE_TAILNET")
     tailscale_api_key = os.getenv("TAILSCALE_API_KEY")
     if tailnet and tailscale_api_key:
         try:
@@ -543,7 +521,16 @@ def create_dashboard_app() -> FastAPI:
     @app.get("/api/setup/tailnet/verify")
     async def verify_tailnet(db: Session = Depends(get_session)) -> dict:
         """Verify Tailscale tailnet configuration."""
-        setup = TailnetSetup(session=db)
+        api_key = os.getenv("TAILSCALE_API_KEY")
+        tailnet = os.getenv("TAILSCALE_TAILNET")  # Optionnel
+
+        if not api_key:
+            return {
+                "configured": False,
+                "error": "TAILSCALE_API_KEY not set",
+            }
+
+        setup = TailnetSetup(tailnet, api_key)
         return await setup.verify_tailnet()
 
     @app.post("/api/setup/tailnet/create-key")
@@ -554,7 +541,16 @@ def create_dashboard_app() -> FastAPI:
         db: Session = Depends(get_session),
     ) -> dict:
         """Create a Tailscale auth key."""
-        setup = TailnetSetup(session=db)
+        api_key = os.getenv("TAILSCALE_API_KEY")
+        tailnet = os.getenv("TAILSCALE_TAILNET")  # Optionnel
+
+        if not api_key:
+            return {
+                "success": False,
+                "error": "TAILSCALE_API_KEY not set",
+            }
+
+        setup = TailnetSetup(tailnet, api_key)
         return await setup.create_auth_key(reusable=reusable, ephemeral=ephemeral, tags=tags)
 
     @app.get("/api/setup/opensearch/verify")

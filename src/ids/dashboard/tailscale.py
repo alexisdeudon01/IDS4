@@ -33,16 +33,16 @@ except ImportError:
 class TailscaleMonitor:
     """Monitor Tailscale tailnet nodes."""
 
-    def __init__(self, tailnet: str, api_key: str) -> None:
+    def __init__(self, tailnet: str | None, api_key: str) -> None:
         """
         Initialize Tailscale monitor.
 
         Args:
-            tailnet: Tailnet name
+            tailnet: Tailnet name (optional, will be auto-detected if None)
             api_key: Tailscale API key
         """
-        self.tailnet = tailnet
         self.api_key = api_key
+        self.tailnet = tailnet
         self._client: Any = None
 
         if TAILSCALE_AVAILABLE and TAILSCALE_SDK == "python-tailscale":
@@ -53,12 +53,44 @@ class TailscaleMonitor:
                 logger.error(f"Failed to initialize python-tailscale client: {e}")
         elif TAILSCALE_AVAILABLE:
             try:
-                self._client = Tailscale(tailnet=tailnet, api_key=api_key)
-                logger.info(f"Tailscale monitor initialized for tailnet: {tailnet}")
+                # Si pas de tailnet, essayer de le détecter
+                if not self.tailnet:
+                    self.tailnet = self._detect_tailnet()
+                
+                if self.tailnet:
+                    self._client = Tailscale(tailnet=self.tailnet, api_key=api_key)
+                    logger.info(f"Tailscale monitor initialized for tailnet: {self.tailnet}")
+                else:
+                    logger.warning("Tailnet not found, Tailscale monitoring disabled")
             except Exception as e:
                 logger.error(f"Failed to initialize Tailscale client: {e}")
         else:
             logger.warning("Tailscale SDK not available")
+    
+    def _detect_tailnet(self) -> str | None:
+        """Détecte le tailnet depuis l'API key."""
+        try:
+            import json
+            import urllib.request
+            from urllib.parse import urlparse
+            
+            url = "https://api.tailscale.com/api/v2/user/self"
+            parsed = urlparse(url)
+            if parsed.scheme != "https":
+                return None
+            
+            headers = {"Authorization": f"Bearer {self.api_key}"}
+            req = urllib.request.Request(url, headers=headers, method="GET")
+            # bandit: B310 - URL scheme validated above
+            with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+                response = json.loads(resp.read().decode("utf-8"))
+                tailnet = response.get("LoginName") or response.get("Profile", {}).get("LoginName")
+                if tailnet and "@" in tailnet:
+                    return tailnet.split("@")[1]
+                return tailnet
+        except Exception as e:
+            logger.warning(f"Could not auto-detect tailnet: {e}")
+        return None
 
     async def get_nodes(self) -> list[TailscaleNode]:
         """

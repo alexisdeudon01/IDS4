@@ -13,6 +13,12 @@ from pathlib import Path
 
 import uvicorn
 
+# Charger les secrets depuis secret.json avant d'importer l'app
+from .load_secrets import set_env_from_secrets
+
+# Charger les secrets
+set_env_from_secrets()
+
 from .app import create_dashboard_app
 
 logging.basicConfig(
