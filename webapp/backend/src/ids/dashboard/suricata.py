@@ -8,9 +8,10 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
-from typing import Any, AsyncIterator, Iterable
+from pathlib import Path as Path
+from typing import Any, AsyncIterator, Iterator
 
+import logging
 from ids.datastructures import AlertEvent
 
 logger = logging.getLogger(__name__)
@@ -21,23 +22,23 @@ SURICATALOG_AVAILABLE = False
 PYEVE_AVAILABLE = False
 PYTHON_SURICATA_AVAILABLE = False
 SuricataLogClient = None
-try:
-    from suricata_log import SuricataLog as SuricataLogClient
+Eve = None
+suricata = None
 
+try:
+    from SuricataLog import SuricataLog as SuricataLogClient  # type: ignore
     SURICATALOG_AVAILABLE = True
 except ImportError:
     logger.warning("SuricataLog not available. Install with: pip install SuricataLog")
 
 try:
-    from pyeve import Eve
-
+    from pyeve import Eve  # type: ignore
     PYEVE_AVAILABLE = True
 except ImportError:
     logger.debug("pyeve not available (optional). Falling back to json parsing.")
 
 try:
-    from suricata import Suricata
-
+    import suricata  # type: ignore
     PYTHON_SURICATA_AVAILABLE = True
 except ImportError:
     logger.debug("Suricata python bindings not available (optional).")
@@ -53,8 +54,8 @@ class SuricataLogMonitor:
         self._task: asyncio.Task | None = None
         self._position = 0
         self._suricata_log: Any | None = None
-        if PYTHON_SURICATA_AVAILABLE and hasattr(suricata, "__version__"):
-            logger.info("python-suricata detected (version %s)", suricata.__version__)
+        if PYTHON_SURICATA_AVAILABLE and suricata and hasattr(suricata, "__version__"):
+            print(f"python-suricata detected (version {suricata.__version__})")
 
     async def start(self) -> None:
         """Start monitoring the log file."""
@@ -63,7 +64,7 @@ class SuricataLogMonitor:
             return
 
         if not self.log_path.exists():
-            logger.warning("Suricata log file not found: %s", self.log_path)
+            print(f"Suricata log file not found: {self.log_path}")
             return
 
         self._running = True
@@ -71,14 +72,14 @@ class SuricataLogMonitor:
             try:
                 self._suricata_log = SuricataLogClient(str(self.log_path))
             except OSError as exc:
-                logger.warning("Failed to initialize SuricataLog: %s", exc)
+                print(f"Failed to initialize SuricataLog: {exc}")
                 self._suricata_log = None
 
         # Get current file size to start from end
         if self.log_path.exists():
             self._position = self.log_path.stat().st_size
 
-        logger.info("Started Suricata log monitoring: %s", self.log_path)
+        print(f"Started Suricata log monitoring: {self.log_path}")
 
     async def stop(self) -> None:
         """Stop monitoring."""
@@ -99,7 +100,7 @@ class SuricataLogMonitor:
             AlertEvent objects for each 'alert' event type found
         """
         if not self.log_path.exists():
-            logger.error("Log file does not exist: %s", self.log_path)
+            print(f"Log file does not exist: {self.log_path}")
             return
 
         if self._suricata_log:
@@ -146,10 +147,10 @@ class SuricataLogMonitor:
                 await asyncio.sleep(0.1)
 
             except FileNotFoundError:
-                logger.warning("Log file disappeared: %s", self.log_path)
+                print(f"Log file disappeared: {self.log_path}")
                 await asyncio.sleep(1)
             except OSError as e:
-                logger.error("Error in tail_alerts: %s", e)
+                print(f"Error in tail_alerts: {e}")
                 await asyncio.sleep(1)
 
     async def get_recent_alerts(self, limit: int = 100) -> list[AlertEvent]:
@@ -197,7 +198,7 @@ class SuricataLogMonitor:
                         break
 
         except OSError as e:
-            logger.error("Error reading recent alerts: %s", e)
+            print(f"Error reading recent alerts: {e}")
 
         return list(reversed(alerts))  # Return in chronological order
 
@@ -205,9 +206,9 @@ class SuricataLogMonitor:
         if not line.strip():
             return None
 
-        if PYEVE_AVAILABLE:
+        if PYEVE_AVAILABLE and Eve:
             try:
-                parser = pyeve.Eve() if hasattr(pyeve, "Eve") else None
+                parser = Eve() if hasattr(Eve, "__call__") else None
                 if parser and hasattr(parser, "loads"):
                     data = parser.loads(line)
                 elif parser and hasattr(parser, "parse"):
@@ -217,12 +218,12 @@ class SuricataLogMonitor:
                 if isinstance(data, dict):
                     return data
             except (ValueError, TypeError) as e:
-                logger.debug("Failed to parse with pyeve: %s", e)
+                print(f"Failed to parse with pyeve: {e}")
 
         try:
             return json.loads(line)
         except json.JSONDecodeError as e:
-            logger.debug("Failed to parse JSON line: %s", e)
+            print(f"Failed to parse JSON line: {e}")
             return None
 
     async def _tail_with_suricatalog(self) -> AsyncIterator[AlertEvent]:
@@ -233,12 +234,12 @@ class SuricataLogMonitor:
 
         while self._running:
             try:
-                event: Any = await asyncio.to_thread(lambda: next(iterator))
+                event: Any = await asyncio.to_thread(lambda: next(iter(iterator)))
             except StopIteration:
                 await asyncio.sleep(0.1)
                 continue
             except OSError as exc:
-                logger.error("Error reading SuricataLog stream: %s", exc)
+                print(f"Error reading SuricataLog stream: {exc}")
                 await asyncio.sleep(0.5)
                 continue
 
@@ -261,14 +262,15 @@ class SuricataLogMonitor:
                 signature=alert_data.get("signature", ""),
             )
 
-    def _get_suricatalog_iterator(self) -> Iterable[Any] | None:
+    def _get_suricatalog_iterator(self) -> Iterator[Any] | None:
         if not self._suricata_log:
             return None
         for method_name in ("tail", "follow", "__iter__"):
             if hasattr(self._suricata_log, method_name):
                 method = getattr(self._suricata_log, method_name)
                 try:
-                    return method() if callable(method) else method
+                    result = method() if callable(method) else method
+                    return iter(result) if result is not None else None
                 except (OSError, AttributeError) as exc:
-                    logger.warning("SuricataLog method %s failed: %s", method_name, exc)
+                    print(f"SuricataLog method {method_name} failed: {exc}")
         return None
