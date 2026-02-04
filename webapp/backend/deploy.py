@@ -11,7 +11,16 @@ from pathlib import Path
 import paramiko
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+# `deploy.py` lives in `webapp/backend/`, so:
+# - parents[0] = webapp/backend
+# - parents[1] = webapp
+# - parents[2] = repository root
+#
+# We need the repository root so `upload_repo()` places files under:
+#   /opt/ids-dashboard/webapp/backend/...
+# instead of:
+#   /opt/ids-dashboard/backend/...
+REPO_ROOT = Path(__file__).resolve().parents[2]
 REMOTE_DIR = "/opt/ids-dashboard"
 SERVICE_NAME = "ids-dashboard.service"
 
@@ -48,13 +57,27 @@ def run_command(client: paramiko.SSHClient, command: str, sudo_password: str | N
 
 
 def upload_repo(client: paramiko.SSHClient, local_root: Path, remote_root: str) -> None:
+    ignore_dir_names = {
+        ".git",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "node_modules",
+        ".venv",
+        "venv",
+    }
     sftp = client.open_sftp()
     try:
         for root, dirs, files in os.walk(local_root):
             rel = os.path.relpath(root, local_root)
-            if rel.startswith(".git") or rel.startswith("frontend/node_modules"):
+            rel_parts = () if rel == "." else Path(rel).parts
+            # Skip heavy / generated directories anywhere in the tree.
+            if any(part in ignore_dir_names for part in rel_parts):
                 dirs[:] = []
                 continue
+            # Prevent os.walk from descending into ignored directories.
+            dirs[:] = [d for d in dirs if d not in ignore_dir_names]
             remote_path = posixpath.join(remote_root, rel) if rel != "." else remote_root
             try:
                 sftp.mkdir(remote_path)
