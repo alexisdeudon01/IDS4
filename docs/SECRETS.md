@@ -10,22 +10,15 @@ Tous les secrets doivent être stockés dans `secret.json` à la racine du proje
 {
   "aws": {
     "access_key_id": "AKIA...",
-    "secret_access_key": "...",
-    "session_token": ""
+    "secret_access_key": "..."
   },
   "tailscale": {
-    "tailnet": "yourname.github",
     "api_key": "tskey-api-..."
-  },
-  "elasticsearch": {
-    "username": "admin",
-    "password": "..."
-  },
-  "anthropic": {
-    "api_key": "sk-ant-..."
   }
 }
 ```
+
+**Note** : `elasticsearch`, `anthropic` et `dashboard` sont optionnels et non nécessaires pour le déploiement de base.
 
 ## Secrets Requis
 
@@ -60,13 +53,15 @@ Tous les secrets doivent être stockés dans `secret.json` à la racine du proje
 - **`elasticsearch.password`** : Mot de passe OpenSearch
   - Nécessaire si OpenSearch a l'authentification activée
 
-#### Anthropic (AI Healing)
-- **`anthropic.api_key`** : Clé API Anthropic Claude
+#### Anthropic (AI Healing) - OPTIONNEL - Non utilisé dans les scripts
+- **`anthropic.api_key`** : Clé API Anthropic Claude (optionnel)
   - Où l'obtenir : https://console.anthropic.com/
   - Format : `sk-ant-...`
-  - Utilisation : Diagnostic automatique des erreurs
+  - Utilisation : Diagnostic automatique des erreurs via endpoint `/api/ai-healing/diagnose`
+  - **Note** : Non requis pour le déploiement, uniquement pour la fonctionnalité AI Healing dans le dashboard
+  - **Non utilisé dans les scripts de déploiement** : Vous pouvez l'ignorer si vous ne voulez pas utiliser l'AI Healing
 
-#### Tailscale OAuth (pour CI/CD)
+#### Tailscale OAuth (pour CI/CD uniquement)
 - **`tailscale.oauth_client_id`** : OAuth Client ID
   - Où l'obtenir : https://login.tailscale.com/admin/oauth-clients
   - Format : `k...`
@@ -74,10 +69,12 @@ Tous les secrets doivent être stockés dans `secret.json` à la racine du proje
 - **`tailscale.oauth_client_secret`** : OAuth Client Secret
   - Format : `tskey-client-...`
 
-#### Dashboard (valeurs par défaut)
-- **`dashboard.port`** : Port du dashboard (défaut: 8080)
-- **`dashboard.mirror_interface`** : Interface réseau (défaut: eth0)
-- **`dashboard.led_pin`** : Pin GPIO pour LED (défaut: 17)
+#### Anthropic (AI Healing) - OPTIONNEL - Non utilisé dans les scripts de déploiement
+- **`anthropic.api_key`** : Clé API Anthropic Claude (optionnel)
+  - Où l'obtenir : https://console.anthropic.com/
+  - Format : `sk-ant-...`
+  - Utilisation : Diagnostic automatique des erreurs via endpoint `/api/ai-healing/diagnose`
+  - **Note** : Non requis pour le déploiement, uniquement pour la fonctionnalité AI Healing dans le dashboard
 
 ## Configuration
 
@@ -105,7 +102,7 @@ nano secret.json
 
 **Note** : Le `tailnet` est détecté automatiquement depuis l'API key. Vous n'avez pas besoin de le spécifier !
 
-**Configuration complète :**
+**Configuration complète (avec options) :**
 ```json
 {
   "aws": {
@@ -114,7 +111,6 @@ nano secret.json
     "session_token": ""
   },
   "tailscale": {
-    "tailnet": "yourname.github",
     "api_key": "tskey-api-...",
     "oauth_client_id": "k...",
     "oauth_client_secret": "tskey-client-..."
@@ -122,17 +118,11 @@ nano secret.json
   "elasticsearch": {
     "username": "admin",
     "password": "..."
-  },
-  "anthropic": {
-    "api_key": "sk-ant-..."
-  },
-  "dashboard": {
-    "port": 8080,
-    "mirror_interface": "eth0",
-    "led_pin": 17
   }
 }
 ```
+
+**Note** : Anthropic (AI Healing) est optionnel et n'est pas nécessaire pour le fonctionnement de base.
 
 ## Utilisation dans le code
 

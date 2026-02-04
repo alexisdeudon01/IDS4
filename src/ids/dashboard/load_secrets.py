@@ -70,12 +70,12 @@ def set_env_from_secrets(secret_path: Path | None = None) -> None:
     if elasticsearch.get("password") and not os.getenv("ELASTICSEARCH_PASSWORD"):
         os.environ["ELASTICSEARCH_PASSWORD"] = elasticsearch["password"]
 
-    # Anthropic
+    # Anthropic (optionnel - AI Healing, non utilisé dans les scripts de déploiement)
     anthropic = secrets.get("anthropic", {})
     if anthropic.get("api_key") and not os.getenv("ANTHROPIC_API_KEY"):
         os.environ["ANTHROPIC_API_KEY"] = anthropic["api_key"]
-
-    # Dashboard
+    
+    # Dashboard config (valeurs par défaut, optionnel)
     dashboard = secrets.get("dashboard", {})
     if dashboard.get("port") and not os.getenv("DASHBOARD_PORT"):
         os.environ["DASHBOARD_PORT"] = str(dashboard["port"])
