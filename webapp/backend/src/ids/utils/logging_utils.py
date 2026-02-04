@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar
 
 T = TypeVar('T')
 
@@ -63,10 +63,11 @@ def safe_execute(func: Callable[[], T], logger: SafeLogger, error_msg: str = "Op
         return None
 
 
-async def safe_execute_async(func: Callable[[], T], logger: SafeLogger, error_msg: str = "Async operation failed: %s") -> T | None:
+async def safe_execute_async(func: Callable[[], Awaitable[T]], logger: SafeLogger, error_msg: str = "Async operation failed: %s") -> T | None:
     """Execute async function with automatic error logging."""
     try:
-        return await func()
+        result: T = await func()
+        return result
     except Exception as e:
         logger.error(error_msg, str(e), exc_info=True)
         return None
