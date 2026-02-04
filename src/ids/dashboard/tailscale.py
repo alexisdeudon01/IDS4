@@ -8,17 +8,26 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from .models import TailscaleNode
+from ids.datastructures import TailscaleNode
 
 logger = logging.getLogger(__name__)
 
 TAILSCALE_AVAILABLE = False
+TAILSCALE_SDK = None
+PythonTailscale = None
 try:
-    from tailscale import Tailscale
+    from python_tailscale import Tailscale as PythonTailscale
 
     TAILSCALE_AVAILABLE = True
+    TAILSCALE_SDK = "python-tailscale"
 except ImportError:
-    logger.warning("tailscale not available. Install with: pip install tailscale")
+    try:
+        from tailscale import Tailscale
+
+        TAILSCALE_AVAILABLE = True
+        TAILSCALE_SDK = "tailscale"
+    except ImportError:
+        logger.warning("tailscale SDK not available. Install with: pip install python-tailscale")
 
 
 class TailscaleMonitor:
@@ -36,7 +45,13 @@ class TailscaleMonitor:
         self.api_key = api_key
         self._client: Any = None
 
-        if TAILSCALE_AVAILABLE:
+        if TAILSCALE_AVAILABLE and TAILSCALE_SDK == "python-tailscale":
+            try:
+                self._client = PythonTailscale(api_key=api_key, tailnet=tailnet)
+                logger.info(f"Python-Tailscale monitor initialized for tailnet: {tailnet}")
+            except Exception as e:
+                logger.error(f"Failed to initialize python-tailscale client: {e}")
+        elif TAILSCALE_AVAILABLE:
             try:
                 self._client = Tailscale(tailnet=tailnet, api_key=api_key)
                 logger.info(f"Tailscale monitor initialized for tailnet: {tailnet}")
@@ -59,7 +74,8 @@ class TailscaleMonitor:
             devices = await self._client.devices()
             nodes: list[TailscaleNode] = []
 
-            for device in devices.devices.values():
+            device_entries = devices.devices.values() if hasattr(devices, "devices") else devices
+            for device in device_entries:
                 if not device.authorized:
                     continue
 

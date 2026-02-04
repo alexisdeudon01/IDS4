@@ -21,14 +21,16 @@ from fastapi.staticfiles import StaticFiles
 from .ai_healing import AIHealingService
 from .elasticsearch import ElasticsearchMonitor
 from .hardware import HardwareController
-from .models import (
-    AlertEvent,
+from ids.datastructures import (
+    AIHealingResponse,
     ElasticsearchHealth,
+    MirrorStatus,
     NetworkStats,
     PipelineStatus,
     SystemHealth,
     TailscaleNode,
 )
+from .mirroring import MirrorMonitor
 from .network import NetworkMonitor
 from .setup import OpenSearchSetup, TailnetSetup, setup_infrastructure
 from .suricata import SuricataLogMonitor
@@ -47,29 +49,100 @@ async def lifespan(app: FastAPI):
     logger.info("Starting IDS Dashboard...")
 
     # Initialize components
-    dashboard_state["suricata"] = SuricataLogMonitor()
-    await dashboard_state["suricata"].start()
-
-    dashboard_state["elasticsearch"] = ElasticsearchMonitor(
-        hosts=os.getenv("ELASTICSEARCH_HOSTS", "http://localhost:9200").split(","),
-        username=os.getenv("ELASTICSEARCH_USERNAME"),
-        password=os.getenv("ELASTICSEARCH_PASSWORD"),
-    )
-    await dashboard_state["elasticsearch"].connect()
-
-    dashboard_state["network"] = NetworkMonitor(interface=os.getenv("MIRROR_INTERFACE", "eth0"))
-    await dashboard_state["network"].ensure_promiscuous_mode()
-
-    dashboard_state["hardware"] = HardwareController(led_pin=int(os.getenv("LED_PIN", "17")))
-
+    dashboard_state["startup_issues"] = []
     dashboard_state["ai_healing"] = AIHealingService(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    async def record_startup_issue(component: str, error: Exception) -> None:
+        ai_healing = dashboard_state.get("ai_healing")
+        if ai_healing:
+            response = await ai_healing.handle_pipeline_error(component, error)
+        else:
+            response = AIHealingResponse(
+                error_type=f"{component.capitalize()}Error",
+                error_message=str(error),
+                suggestion="AI healing service not available. Install anthropic package.",
+                timestamp=datetime.now(),
+            )
+        dashboard_state["startup_issues"].append(response)
+
+    try:
+        dashboard_state["suricata"] = SuricataLogMonitor()
+        await dashboard_state["suricata"].start()
+    except Exception as exc:
+        logger.error(f"Failed to start Suricata monitor: {exc}")
+        await record_startup_issue("suricata", exc)
+
+    try:
+        dashboard_state["elasticsearch"] = ElasticsearchMonitor(
+            hosts=os.getenv("ELASTICSEARCH_HOSTS", "http://localhost:9200").split(","),
+            username=os.getenv("ELASTICSEARCH_USERNAME"),
+            password=os.getenv("ELASTICSEARCH_PASSWORD"),
+        )
+        await dashboard_state["elasticsearch"].connect()
+    except Exception as exc:
+        logger.error(f"Failed to connect to Elasticsearch: {exc}")
+        await record_startup_issue("elasticsearch", exc)
+
+    try:
+        dashboard_state["network"] = NetworkMonitor(interface=os.getenv("MIRROR_INTERFACE", "eth0"))
+        promisc_enabled = await dashboard_state["network"].ensure_promiscuous_mode()
+        if not promisc_enabled:
+            await record_startup_issue(
+                "network",
+                RuntimeError("Failed to enable promiscuous mode on mirror interface."),
+            )
+    except Exception as exc:
+        logger.error(f"Failed to initialize network monitor: {exc}")
+        await record_startup_issue("network", exc)
+
+    try:
+        dashboard_state["hardware"] = HardwareController(led_pin=int(os.getenv("LED_PIN", "17")))
+    except Exception as exc:
+        logger.error(f"Failed to initialize hardware controller: {exc}")
+        await record_startup_issue("hardware", exc)
 
     tailnet = os.getenv("TAILSCALE_TAILNET")
     tailscale_api_key = os.getenv("TAILSCALE_API_KEY")
     if tailnet and tailscale_api_key:
-        dashboard_state["tailscale"] = TailscaleMonitor(tailnet=tailnet, api_key=tailscale_api_key)
+        try:
+            dashboard_state["tailscale"] = TailscaleMonitor(
+                tailnet=tailnet,
+                api_key=tailscale_api_key,
+            )
+        except Exception as exc:
+            logger.error(f"Failed to initialize Tailscale monitor: {exc}")
+            dashboard_state["tailscale"] = None
+            await record_startup_issue("tailscale", exc)
     else:
         dashboard_state["tailscale"] = None
+
+    mirror_monitor = MirrorMonitor(
+        base_url=os.getenv("TP_LINK_SWITCH_URL"),
+        username=os.getenv("TP_LINK_SWITCH_USER"),
+        password=os.getenv("TP_LINK_SWITCH_PASSWORD"),
+        source_port=os.getenv("TP_LINK_MIRROR_SOURCE", "1"),
+        mirror_port=os.getenv("TP_LINK_MIRROR_TARGET", "5"),
+    )
+    try:
+        dashboard_state["mirror_monitor"] = mirror_monitor
+        mirror_status = await mirror_monitor.check_mirroring()
+        dashboard_state["mirror_status"] = mirror_status
+        if mirror_status.configured and not mirror_status.active:
+            await record_startup_issue(
+                "mirroring",
+                RuntimeError("Port mirroring inactive on TP-Link switch."),
+            )
+    except Exception as exc:
+        logger.error(f"Failed to verify mirroring configuration: {exc}")
+        dashboard_state["mirror_status"] = MirrorStatus(
+            configured=True,
+            active=False,
+            source_port=os.getenv("TP_LINK_MIRROR_SOURCE", "1"),
+            mirror_port=os.getenv("TP_LINK_MIRROR_TARGET", "5"),
+            message=str(exc),
+            checked_at=datetime.now(),
+        )
+        await record_startup_issue("mirroring", exc)
 
     logger.info("IDS Dashboard started")
 
@@ -277,6 +350,20 @@ def create_dashboard_app() -> FastAPI:
         )
 
         return response.model_dump(mode="json")
+
+    @app.get("/api/ai-healing/startup-issues")
+    async def get_startup_issues() -> list[dict]:
+        """Get AI healing suggestions captured during startup."""
+        issues: list[AIHealingResponse] = dashboard_state.get("startup_issues", [])
+        return [issue.model_dump(mode="json") for issue in issues]
+
+    @app.get("/api/mirror/status")
+    async def get_mirror_status() -> MirrorStatus | None:
+        """Get port mirroring verification status."""
+        mirror_monitor = dashboard_state.get("mirror_monitor")
+        if mirror_monitor:
+            dashboard_state["mirror_status"] = await mirror_monitor.check_mirroring()
+        return dashboard_state.get("mirror_status")
 
     # ============================================================================
     # Setup & Configuration Endpoints

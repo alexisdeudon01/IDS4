@@ -4,15 +4,27 @@ Elasticsearch cluster health monitoring.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from elasticsearch import AsyncElasticsearch
 
-from .models import ElasticsearchHealth
+from ids.datastructures import ElasticsearchHealth
 
 logger = logging.getLogger(__name__)
+
+DSL_AVAILABLE = False
+Index = None
+connections = None
+try:
+    from elasticsearch_dsl import Index
+    from elasticsearch_dsl.connections import connections
+
+    DSL_AVAILABLE = True
+except ImportError:
+    logger.warning("elasticsearch-dsl not available. Install with: pip install elasticsearch-dsl")
 
 
 class ElasticsearchMonitor:
@@ -49,6 +61,9 @@ class ElasticsearchMonitor:
                 basic_auth=auth,
                 request_timeout=10,
             )
+
+            if DSL_AVAILABLE and connections:
+                connections.add_connection("default", self._client)
 
             # Test connection
             info = await self._client.info()
@@ -87,24 +102,7 @@ class ElasticsearchMonitor:
 
             # Count daily indices (indices created today)
             today = datetime.now().date()
-            daily_count = 0
-
-            for idx in indices_response:
-                index_name = idx.get("index", "")
-                # Check if index matches daily pattern (e.g., logstash-2024.01.15)
-                if "." in index_name:
-                    try:
-                        # Try to extract date from index name
-                        parts = index_name.split(".")
-                        if len(parts) >= 3:
-                            year = int(parts[-3])
-                            month = int(parts[-2])
-                            day = int(parts[-1])
-                            index_date = datetime(year, month, day).date()
-                            if index_date == today:
-                                daily_count += 1
-                    except (ValueError, IndexError):
-                        continue
+            daily_count = await self._count_daily_indices(today, indices_response)
 
             return ElasticsearchHealth(
                 status=health_response.get("status", "unknown"),
@@ -122,6 +120,54 @@ class ElasticsearchMonitor:
         except Exception as e:
             logger.error(f"Error getting cluster health: {e}")
             return None
+
+    async def _count_daily_indices(
+        self,
+        today: datetime.date,
+        indices_response: list[dict[str, Any]],
+    ) -> int:
+        if DSL_AVAILABLE and Index is not None:
+            try:
+                index_settings = await asyncio.to_thread(Index("*").get_settings)
+                count = 0
+                for index_name, settings in index_settings.items():
+                    creation_ms = (
+                        settings.get("settings", {})
+                        .get("index", {})
+                        .get("creation_date")
+                    )
+                    if creation_ms:
+                        creation_date = datetime.fromtimestamp(int(creation_ms) / 1000.0).date()
+                        if creation_date == today:
+                            count += 1
+                            continue
+                    if self._index_name_matches_date(index_name, today):
+                        count += 1
+                return count
+            except Exception as exc:
+                logger.debug(f"DSL index count failed, falling back: {exc}")
+
+        count = 0
+        for idx in indices_response:
+            index_name = idx.get("index", "")
+            if self._index_name_matches_date(index_name, today):
+                count += 1
+        return count
+
+    @staticmethod
+    def _index_name_matches_date(index_name: str, today: datetime.date) -> bool:
+        if "." not in index_name:
+            return False
+        try:
+            parts = index_name.split(".")
+            if len(parts) >= 3:
+                year = int(parts[-3])
+                month = int(parts[-2])
+                day = int(parts[-1])
+                return datetime(year, month, day).date() == today
+        except (ValueError, IndexError):
+            return False
+        return False
 
     async def get_index_stats(self, index_pattern: str = "logstash-*") -> dict[str, Any]:
         """

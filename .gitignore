@@ -17,6 +17,7 @@ tests/pytest.log
 *.egg-info/
 dist/
 build/
+frontend/node_modules/
 
 # IDE
 .idea/
