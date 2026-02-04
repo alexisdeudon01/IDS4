@@ -3,6 +3,9 @@ scripts/actions_secrets.map
 secret.json
 data/
 
+# Secrets
+secret.json
+
 # Python cache
 __pycache__/
 *.py[cod]
@@ -20,7 +23,6 @@ tests/pytest.log
 dist/
 build/
 frontend/node_modules/
-webapp/frontend/node_modules/
 
 # IDE
 .idea/

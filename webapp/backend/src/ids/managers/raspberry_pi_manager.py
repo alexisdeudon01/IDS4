@@ -149,9 +149,9 @@ class RaspberryPiManager:
 
         try:
             self._ssh_client.connect(**connect_kwargs)
-            logger.info(f"SSH connected to {self.user}@{self.host}")
+            logger.info("SSH connected to %s@%s", self.user, self.host)
         except Exception as e:
-            logger.error(f"SSH connection failed: {e}")
+            logger.error("SSH connection failed: %s", e)
             raise
 
     def disconnect(self) -> None:
@@ -204,7 +204,7 @@ class RaspberryPiManager:
         if sudo:
             command = f"sudo {command}"
 
-        logger.debug(f"Executing: {command}")
+        logger.debug("Executing: %s", command)
 
         try:
             # bandit: B601 - Command validated above (dangerous chars checked)
@@ -214,13 +214,13 @@ class RaspberryPiManager:
             stderr_text = stderr.read().decode("utf-8")
 
             if exit_code != 0:
-                logger.warning(f"Command failed (exit {exit_code}): {command}")
-                logger.warning(f"stderr: {stderr_text}")
+                logger.warning("Command failed (exit %s): %s", exit_code, command)
+                logger.warning("stderr: %s", stderr_text)
 
             return exit_code, stdout_text, stderr_text
 
         except Exception as e:
-            logger.error(f"Command execution error: {e}")
+            logger.error("Command execution error: %s", e)
             raise
 
     # =========================================================================
@@ -451,10 +451,10 @@ class RaspberryPiManager:
             sftp = self._ssh_client.open_sftp()
             sftp.put(local_path, remote_path)
             sftp.close()
-            logger.info(f"File uploaded: {local_path} -> {remote_path}")
+            logger.info("File uploaded: %s -> %s", local_path, remote_path)
             return True
         except Exception as e:
-            logger.error(f"File upload failed: {e}")
+            logger.error("File upload failed: %s", e)
             return False
 
     def download_file(self, remote_path: str, local_path: str) -> bool:
@@ -475,10 +475,10 @@ class RaspberryPiManager:
             sftp = self._ssh_client.open_sftp()
             sftp.get(remote_path, local_path)
             sftp.close()
-            logger.info(f"File downloaded: {remote_path} -> {local_path}")
+            logger.info("File downloaded: %s -> %s", remote_path, local_path)
             return True
         except Exception as e:
-            logger.error(f"File download failed: {e}")
+            logger.error("File download failed: %s", e)
             return False
 
     def upload_directory(self, local_dir: str, remote_dir: str) -> bool:
@@ -509,10 +509,10 @@ class RaspberryPiManager:
                 capture_output=True,
                 text=True,
             )
-            logger.info(f"Directory synced: {local_dir} -> {remote_dir}")
+            logger.info("Directory synced: %s -> %s", local_dir, remote_dir)
             return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"Directory sync failed: {e}")
+            logger.error("Directory sync failed: %s", e)
             return False
 
     # =========================================================================
@@ -637,7 +637,7 @@ class RaspberryPiManager:
             return interfaces
 
         except Exception as e:
-            logger.error(f"Failed to parse network interfaces: {e}")
+            logger.error("Failed to parse network interfaces: %s", e)
             return {}
 
     # =========================================================================
